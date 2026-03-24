@@ -1,321 +1,343 @@
 import { useState, useMemo, useCallback } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Cell, CartesianGrid,
+  ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Cell,
 } from 'recharts';
-import {
-  FlaskConical, Play, RotateCcw, TrendingDown, TrendingUp,
-  ArrowRight, Check, Minus,
-} from 'lucide-react';
+import { Play, RotateCcw, TrendingUp, ChevronUp } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { predictAttrition } from '../lib/predict';
-import { formatCurrencyFull } from '../lib/costs';
-
-function EditableField({ label, value, onChange, type = 'text', options }) {
-  if (options) {
-    return (
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">{label}</label>
-        <select
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm text-white focus:outline-none focus:border-blue-500"
-        >
-          {options.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
-        className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm text-white focus:outline-none focus:border-blue-500"
-      />
-    </div>
-  );
-}
-
-function DeltaIndicator({ original, updated }) {
-  const origPct = (original * 100).toFixed(1);
-  const updPct = (updated * 100).toFixed(1);
-  const delta = updated - original;
-  const deltaPct = (delta * 100).toFixed(1);
-
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-slate-400">{origPct}%</span>
-      <ArrowRight className="w-4 h-4 text-slate-600" />
-      <span className={`text-sm font-semibold ${delta < 0 ? 'text-emerald-400' : delta > 0 ? 'text-red-400' : 'text-slate-300'}`}>
-        {updPct}%
-      </span>
-      <span className={`text-xs px-2 py-0.5 rounded-full ${
-        delta < -0.01 ? 'bg-emerald-500/20 text-emerald-400' :
-        delta > 0.01 ? 'bg-red-500/20 text-red-400' :
-        'bg-slate-700 text-slate-400'
-      }`}>
-        {delta < 0 ? '' : '+'}{deltaPct}%
-      </span>
-    </div>
-  );
-}
+import { formatCurrency, formatCurrencyFull } from '../lib/costs';
 
 export default function WhatIfAnalysis() {
-  const { employees, modelReady, loading } = useData();
-  const [selectedId, setSelectedId] = useState(null);
+  const { employees, departments, modelReady, loading } = useData();
+  const [tab, setTab] = useState('whatif');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [selectedRows, setSelectedRows] = useState(new Set());
   const [edits, setEdits] = useState({});
-  const [results, setResults] = useState([]);
+  const [predictions, setPredictions] = useState(null);
 
-  const atRiskEmployees = useMemo(() =>
-    employees.filter(e => e.label === 'Yes').sort((a, b) => b.prob_of_attrition - a.prob_of_attrition),
-    [employees]
+  // Overtime, WorkLife, Travel, Performance dropdowns
+  const [overtime, setOvertime] = useState('Original');
+  const [worklife, setWorklife] = useState('Original');
+  const [travel, setTravel] = useState('Original');
+  const [performance, setPerformance] = useState('Original');
+  const [salaryIncrease, setSalaryIncrease] = useState(0);
+
+  const atRisk = useMemo(() => {
+    let data = employees.filter(e => e.label === 'Yes');
+    if (deptFilter) data = data.filter(e => e.Department === deptFilter);
+    return data;
+  }, [employees, deptFilter]);
+
+  const scatterData = useMemo(() =>
+    atRisk.map(e => ({
+      x: e.employee_score || 50,
+      y: e.attrition_cost || 0,
+      name: e.Name,
+      id: e.EmployeeNumber,
+      prob: e.prob_of_attrition,
+      dept: e.Department,
+    })),
+    [atRisk]
   );
 
-  const selectedEmployee = useMemo(() =>
-    atRiskEmployees.find(e => e.EmployeeNumber === selectedId),
-    [atRiskEmployees, selectedId]
+  function toggleRow(id) {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (selectedRows.size === atRisk.length) setSelectedRows(new Set());
+    else setSelectedRows(new Set(atRisk.map(e => e.EmployeeNumber)));
+  }
+
+  const selectedEmployees = useMemo(() =>
+    atRisk.filter(e => selectedRows.has(e.EmployeeNumber)),
+    [atRisk, selectedRows]
   );
 
-  const editableFields = [
-    { key: 'OverTime', label: 'Overtime', options: ['Yes', 'No'] },
-    { key: 'MonthlyIncome', label: 'Monthly Income', type: 'number' },
-    { key: 'BusinessTravel', label: 'Business Travel', options: ['Travel_Frequently', 'Travel_Rarely', 'Non-Travel'] },
-    { key: 'StockOptionLevel', label: 'Stock Options', options: ['0', '1', '2', '3'] },
-    { key: 'WorkLifeBalance', label: 'Work-Life Balance', options: ['Bad', 'Good', 'Better', 'Best'] },
-    { key: 'TrainingTimesLastYear', label: 'Training (times/yr)', type: 'number' },
-    { key: 'YearsSinceLastPromotion', label: 'Years Since Promotion', type: 'number' },
-    { key: 'PerformanceRating', label: 'Performance Rating', options: ['Low', 'High', 'Excellent', 'Outstanding'] },
-    { key: 'DistanceFromHome', label: 'Distance From Home', type: 'number' },
-    { key: 'EnvironmentSatisfaction', label: 'Environment Satisfaction', options: ['Low', 'Medium', 'High', 'Very High'] },
-    { key: 'JobSatisfaction', label: 'Job Satisfaction', options: ['Low', 'Medium', 'High', 'Very High'] },
-  ];
+  function promote() {
+    // Set years since promotion to 0 for selected
+    const newEdits = { ...edits };
+    selectedRows.forEach(id => {
+      if (!newEdits[id]) newEdits[id] = {};
+      newEdits[id].YearsSinceLastPromotion = 0;
+    });
+    setEdits(newEdits);
+  }
 
-  function selectEmployee(emp) {
-    setSelectedId(emp.EmployeeNumber);
+  function resetAll() {
     setEdits({});
-    setResults([]);
+    setOvertime('Original');
+    setWorklife('Original');
+    setTravel('Original');
+    setPerformance('Original');
+    setSalaryIncrease(0);
+    setPredictions(null);
   }
 
-  function getEditedValue(key) {
-    if (key in edits) return edits[key];
-    return selectedEmployee?.[key] ?? '';
+  function generatePredictions() {
+    if (!modelReady || selectedRows.size === 0) return;
+    const results = [];
+    selectedRows.forEach(id => {
+      const emp = atRisk.find(e => e.EmployeeNumber === id);
+      if (!emp) return;
+      const modified = { ...emp, ...(edits[id] || {}) };
+      if (overtime !== 'Original') modified.OverTime = overtime;
+      if (worklife !== 'Original') modified.WorkLifeBalance = worklife;
+      if (travel !== 'Original') modified.BusinessTravel = travel;
+      if (performance !== 'Original') modified.PerformanceRating = performance;
+      if (salaryIncrease > 0) modified.MonthlyIncome = Math.round(emp.MonthlyIncome * (1 + salaryIncrease / 100));
+
+      const newProb = predictAttrition(modified);
+      results.push({
+        ...emp,
+        originalProb: emp.prob_of_attrition,
+        updatedPrediction: newProb >= 0.5 ? 'Yes' : 'No',
+        updatedProb: newProb,
+        modifiedIncome: modified.MonthlyIncome,
+      });
+    });
+    setPredictions(results);
+    setTab('updated');
   }
 
-  function updateField(key, value) {
-    setEdits(prev => ({ ...prev, [key]: value }));
-  }
-
-  function runPrediction() {
-    if (!selectedEmployee || !modelReady) return;
-    const modified = { ...selectedEmployee, ...edits };
-    const newProb = predictAttrition(modified);
-    setResults(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        changes: { ...edits },
-        originalProb: selectedEmployee.prob_of_attrition,
-        newProb,
-      },
-    ]);
-  }
-
-  function applyQuickAction(action) {
-    if (!selectedEmployee) return;
-    switch (action) {
-      case 'remove-overtime':
-        setEdits(prev => ({ ...prev, OverTime: 'No' }));
-        break;
-      case 'increase-salary-10':
-        setEdits(prev => ({ ...prev, MonthlyIncome: Math.round(selectedEmployee.MonthlyIncome * 1.1) }));
-        break;
-      case 'increase-salary-20':
-        setEdits(prev => ({ ...prev, MonthlyIncome: Math.round(selectedEmployee.MonthlyIncome * 1.2) }));
-        break;
-      case 'promote':
-        setEdits(prev => ({ ...prev, YearsSinceLastPromotion: 0 }));
-        break;
-      case 'improve-wlb':
-        setEdits(prev => ({ ...prev, WorkLifeBalance: 'Best' }));
-        break;
-      case 'add-training':
-        setEdits(prev => ({ ...prev, TrainingTimesLastYear: (selectedEmployee.TrainingTimesLastYear || 0) + 2 }));
-        break;
-    }
-  }
-
-  function reset() {
-    setEdits({});
-    setResults([]);
-  }
-
-  const comparisonData = useMemo(() => {
-    if (!results.length || !selectedEmployee) return [];
-    const latest = results[results.length - 1];
-    return [
-      { name: 'Original', value: latest.originalProb * 100, fill: '#ef4444' },
-      { name: 'Modified', value: latest.newProb * 100, fill: latest.newProb < latest.originalProb ? '#22c55e' : '#f59e0b' },
-    ];
-  }, [results, selectedEmployee]);
-
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="text-xl font-bold text-white">What-If Analysis</h2>
-        <p className="text-sm text-slate-400 mt-1">Modify employee attributes and see how attrition risk changes in real-time</p>
+    <div className="p-6 animate-fade-in">
+      {/* Tabs */}
+      <div className="flex gap-0 border-b border-gray-200 mb-4">
+        <button onClick={() => setTab('whatif')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === 'whatif' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent'}`}>
+          What-if Analysis
+        </button>
+        <button onClick={() => setTab('updated')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === 'updated' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent'}`}>
+          Updated Predictions
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Employee Selector */}
-        <div className="lg:col-span-1">
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">At-Risk Employees</h3>
-            <div className="space-y-1 max-h-[500px] overflow-y-auto">
-              {atRiskEmployees.slice(0, 50).map(emp => (
-                <button
-                  key={emp.EmployeeNumber}
-                  onClick={() => selectEmployee(emp)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                    selectedId === emp.EmployeeNumber
-                      ? 'bg-blue-600/20 border border-blue-500/30 text-white'
-                      : 'hover:bg-slate-800 text-slate-400'
-                  }`}
-                >
-                  <p className="font-medium truncate">{emp.Name}</p>
-                  <p className="text-slate-500">{emp.JobRole} &middot; {((emp.prob_of_attrition || 0) * 100).toFixed(0)}% risk</p>
-                </button>
-              ))}
+      {tab === 'whatif' && (
+        <div className="space-y-4">
+          {/* Department filter */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600">Select Department</label>
+            <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded text-sm">
+              <option value="">All</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Scatter Plot */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm text-gray-600 mb-3">Attrition Cost by Employee Score for Employees who are predicted Leave</h3>
+            <ResponsiveContainer width="100%" height={350}>
+              <ScatterChart margin={{ bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="x" name="Employee Score" stroke="#9ca3af" fontSize={11}
+                  label={{ value: 'Employee Score', position: 'bottom', fill: '#6b7280', fontSize: 11 }} />
+                <YAxis dataKey="y" name="Attrition Cost ($)" stroke="#9ca3af" fontSize={11}
+                  tickFormatter={v => formatCurrency(v)} />
+                <Tooltip content={({ payload }) => {
+                  if (!payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  return (
+                    <div className="bg-white border border-gray-300 rounded p-2 text-xs shadow">
+                      <p className="font-medium">{d?.name}</p>
+                      <p>Score: {d?.x?.toFixed(1)}</p>
+                      <p>Cost: {formatCurrencyFull(d?.y || 0)}</p>
+                      <p>Risk: {((d?.prob || 0) * 100).toFixed(0)}%</p>
+                    </div>
+                  );
+                }} />
+                <Scatter data={scatterData}>
+                  {scatterData.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill={selectedRows.has(entry.id) ? '#ef4444' : '#4299e1'}
+                      fillOpacity={0.6}
+                      r={selectedRows.has(entry.id) ? 6 : 4}
+                      cursor="pointer"
+                      onClick={() => toggleRow(entry.id)}
+                    />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Controls */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Overtime</label>
+                <select value={overtime} onChange={e => setOvertime(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                  <option>Original</option><option>Yes</option><option>No</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Worklife Balance</label>
+                <select value={worklife} onChange={e => setWorklife(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                  <option>Original</option><option>Bad</option><option>Good</option><option>Better</option><option>Best</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Business Travel</label>
+                <select value={travel} onChange={e => setTravel(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                  <option>Original</option><option>Non-Travel</option><option>Travel_Rarely</option><option>Travel_Frequently</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Performance Rating</label>
+                <select value={performance} onChange={e => setPerformance(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                  <option>Original</option><option>Low</option><option>High</option><option>Excellent</option><option>Outstanding</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs text-gray-500 mb-1">Increase Monthly Income by %: {salaryIncrease}%</label>
+                <input type="range" min="0" max="50" value={salaryIncrease}
+                  onChange={e => setSalaryIncrease(Number(e.target.value))}
+                  className="w-full accent-blue-600" />
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map(v => <span key={v}>{v}</span>)}
+                </div>
+              </div>
+              <button onClick={promote}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-500 flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" /> Promote
+              </button>
+              <button onClick={resetAll}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 flex items-center gap-1">
+                <RotateCcw className="w-4 h-4" /> Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Selected Data Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">Selected Data</h3>
+              <span className="text-xs text-gray-400">Showing {selectedEmployees.length} of {atRisk.length} entries</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">
+                      <input type="checkbox" checked={selectedRows.size === atRisk.length} onChange={selectAll} />
+                    </th>
+                    {['EmployeeNumber', 'Name', 'MaritalStatus', 'OverTime', 'MonthlyIncome', 'MonthlyRate', 'DailyRate', 'BusinessTravel', 'StockOptionLevel', 'WorkLifeBalance', 'TrainingTimesLastYear', 'YearsInCurrentRole'].map(col => (
+                      <th key={col} className="text-left py-2 px-2 text-gray-500 font-medium whitespace-nowrap">{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedEmployees.length > 0 ? selectedEmployees : atRisk.slice(0, 10)).map(emp => (
+                    <tr key={emp.EmployeeNumber} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-1.5 px-2">
+                        <input type="checkbox" checked={selectedRows.has(emp.EmployeeNumber)}
+                          onChange={() => toggleRow(emp.EmployeeNumber)} />
+                      </td>
+                      <td className="py-1.5 px-2">{emp.EmployeeNumber}</td>
+                      <td className="py-1.5 px-2 whitespace-nowrap">{emp.Name}</td>
+                      <td className="py-1.5 px-2">{emp.MaritalStatus}</td>
+                      <td className="py-1.5 px-2">{emp.OverTime}</td>
+                      <td className="py-1.5 px-2">{emp.MonthlyIncome}</td>
+                      <td className="py-1.5 px-2">{emp.MonthlyRate}</td>
+                      <td className="py-1.5 px-2">{emp.DailyRate}</td>
+                      <td className="py-1.5 px-2">{emp.BusinessTravel}</td>
+                      <td className="py-1.5 px-2">{emp.StockOptionLevel}</td>
+                      <td className="py-1.5 px-2">{emp.WorkLifeBalance}</td>
+                      <td className="py-1.5 px-2">{emp.TrainingTimesLastYear}</td>
+                      <td className="py-1.5 px-2">{emp.YearsInCurrentRole}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex justify-start">
+              <button
+                onClick={generatePredictions}
+                disabled={selectedRows.size === 0 || !modelReady}
+                className="px-5 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Generate New Predictions
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Editor + Results */}
-        <div className="lg:col-span-3 space-y-4">
-          {selectedEmployee ? (
-            <>
-              {/* Quick Actions */}
-              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-slate-300 mb-3">Quick Actions</h3>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'remove-overtime', label: 'Remove Overtime' },
-                    { id: 'increase-salary-10', label: 'Raise Salary 10%' },
-                    { id: 'increase-salary-20', label: 'Raise Salary 20%' },
-                    { id: 'promote', label: 'Promote' },
-                    { id: 'improve-wlb', label: 'Improve Work-Life' },
-                    { id: 'add-training', label: 'Add Training' },
-                  ].map(action => (
-                    <button
-                      key={action.id}
-                      onClick={() => applyQuickAction(action.id)}
-                      className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Editor */}
-              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-slate-300">
-                    Editing: {selectedEmployee.Name}
-                  </h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={reset}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 hover:bg-slate-700 transition-colors"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" /> Reset
-                    </button>
-                    <button
-                      onClick={runPrediction}
-                      disabled={!modelReady || Object.keys(edits).length === 0}
-                      className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 rounded-lg text-xs text-white font-medium hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Play className="w-3.5 h-3.5" /> Run Prediction
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {editableFields.map(field => (
-                    <EditableField
-                      key={field.key}
-                      label={field.label}
-                      value={getEditedValue(field.key)}
-                      onChange={v => updateField(field.key, v)}
-                      type={field.type}
-                      options={field.options}
-                    />
-                  ))}
-                </div>
-                {Object.keys(edits).length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {Object.entries(edits).map(([key, val]) => (
-                      <span key={key} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-blue-300">
-                        {key}: {String(selectedEmployee[key])} &rarr; {String(val)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Results */}
-              {results.length > 0 && (
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-                  <h3 className="text-sm font-semibold text-slate-300 mb-4">Prediction Results</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={comparisonData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                          <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                          <YAxis stroke="#64748b" fontSize={11} domain={[0, 100]} />
-                          <Tooltip
-                            contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, fontSize: 12 }}
-                            formatter={v => [`${v.toFixed(1)}%`, 'Risk']}
-                          />
-                          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                            {comparisonData.map((entry, i) => (
-                              <Cell key={i} fill={entry.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="space-y-3">
-                      {results.map((r, i) => (
-                        <div key={r.id} className="bg-slate-800/50 rounded-lg p-3">
-                          <p className="text-xs text-slate-400 mb-2">Scenario {i + 1}</p>
-                          <DeltaIndicator original={r.originalProb} updated={r.newProb} />
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {Object.entries(r.changes).map(([k, v]) => (
-                              <span key={k} className="text-[10px] px-1.5 py-0.5 bg-slate-700 rounded text-slate-400">
-                                {k}={String(v)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+      {tab === 'updated' && (
+        <div className="space-y-4">
+          {predictions && predictions.length > 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Updated Predictions</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      {['Name', 'Department', 'JobRole', 'Original Prediction', 'Original Risk', 'Updated Prediction', 'Updated Risk', 'Change'].map(col => (
+                        <th key={col} className="text-left py-2 px-3 text-gray-500 font-medium whitespace-nowrap">{col}</th>
                       ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {predictions.map(p => {
+                      const delta = p.updatedProb - p.originalProb;
+                      return (
+                        <tr key={p.EmployeeNumber} className="border-b border-gray-100">
+                          <td className="py-2 px-3 whitespace-nowrap">{p.Name}</td>
+                          <td className="py-2 px-3">{p.Department}</td>
+                          <td className="py-2 px-3">{p.JobRole}</td>
+                          <td className="py-2 px-3">{p.label}</td>
+                          <td className="py-2 px-3">{((p.originalProb || 0) * 100).toFixed(1)}%</td>
+                          <td className="py-2 px-3">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              p.updatedPrediction === 'Yes' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                            }`}>
+                              {p.updatedPrediction === 'Yes' ? 'Leave' : 'Stay'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">{(p.updatedProb * 100).toFixed(1)}%</td>
+                          <td className="py-2 px-3">
+                            <span className={delta < 0 ? 'text-green-600 font-medium' : delta > 0 ? 'text-red-600 font-medium' : 'text-gray-500'}>
+                              {delta < 0 ? '' : '+'}{(delta * 100).toFixed(1)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-              <FlaskConical className="w-12 h-12 mb-4 opacity-30" />
-              <p className="text-sm">Select an at-risk employee to begin scenario analysis</p>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-400">
+              <p>No predictions generated yet. Go to the What-if Analysis tab, select employees, and click "Generate New Predictions".</p>
             </div>
           )}
+
+          <button onClick={() => setTab('whatif')}
+            className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+            &larr; Previous
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
