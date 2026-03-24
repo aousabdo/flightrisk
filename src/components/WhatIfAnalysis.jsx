@@ -184,11 +184,11 @@ export default function WhatIfAnalysis() {
                   {scatterData.map((entry, i) => (
                     <Cell
                       key={i}
-                      fill={selectedRows.has(entry.id) ? '#ef4444' : '#93bbf0'}
-                      fillOpacity={selectedRows.has(entry.id) ? 0.9 : 0.5}
-                      r={selectedRows.has(entry.id) ? 8 : 5}
-                      stroke={selectedRows.has(entry.id) ? '#dc2626' : 'none'}
-                      strokeWidth={selectedRows.has(entry.id) ? 2 : 0}
+                      fill={selectedRows.has(entry.id) ? '#ef4444' : '#4a90d9'}
+                      fillOpacity={selectedRows.has(entry.id) ? 1 : 0.7}
+                      r={selectedRows.has(entry.id) ? 8 : 6}
+                      stroke={selectedRows.has(entry.id) ? '#dc2626' : '#3b7dd8'}
+                      strokeWidth={selectedRows.has(entry.id) ? 2 : 1}
                       cursor="pointer"
                     />
                   ))}
