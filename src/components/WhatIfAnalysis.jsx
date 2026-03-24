@@ -26,7 +26,7 @@ export default function WhatIfAnalysis() {
   const atRisk = useMemo(() => {
     let data = employees.filter(e => e.label === 'Yes');
     if (deptFilter) data = data.filter(e => e.Department === deptFilter);
-    return data;
+    return data.sort((a, b) => (b.prob_of_attrition || 0) - (a.prob_of_attrition || 0));
   }, [employees, deptFilter]);
 
   const scatterData = useMemo(() =>
@@ -213,8 +213,10 @@ export default function WhatIfAnalysis() {
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-medium truncate">{emp.Name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                      (emp.prob_of_attrition || 0) >= 0.9 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                      (emp.prob_of_attrition || 0) >= 0.7 ? 'bg-red-100 text-red-600' :
+                      (emp.prob_of_attrition || 0) >= 0.5 ? 'bg-orange-100 text-orange-600' :
+                      'bg-amber-100 text-amber-600'
                     }`}>
                       {((emp.prob_of_attrition || 0) * 100).toFixed(0)}%
                     </span>
