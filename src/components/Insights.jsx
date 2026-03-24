@@ -139,7 +139,25 @@ export default function Insights() {
       if (e.label === 'Yes') byDist[d].atRisk++;
     });
 
-    return { total, atRisk: atRisk.length, totalCost, byDept, byPerf, byRole, byIncome, byGender, byTravel, byHike, byDist };
+    // By overtime
+    const byOvertime = {};
+    data.forEach(e => {
+      const ot = e.OverTime || 'Unknown';
+      if (!byOvertime[ot]) byOvertime[ot] = { total: 0, atRisk: 0 };
+      byOvertime[ot].total++;
+      if (e.label === 'Yes') byOvertime[ot].atRisk++;
+    });
+
+    // By job satisfaction
+    const byJobSat = {};
+    data.forEach(e => {
+      const js = e.JobSatisfaction || 'Unknown';
+      if (!byJobSat[js]) byJobSat[js] = { total: 0, atRisk: 0 };
+      byJobSat[js].total++;
+      if (e.label === 'Yes') byJobSat[js].atRisk++;
+    });
+
+    return { total, atRisk: atRisk.length, totalCost, byDept, byPerf, byRole, byIncome, byGender, byTravel, byHike, byDist, byOvertime, byJobSat };
   }, [employees, genderFilter, deptFilterInsight]);
 
   const overallDonut = [
@@ -328,6 +346,19 @@ export default function Insights() {
                   <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={v => `${v}%`} />
                   <Tooltip contentStyle={{ fontSize: 12 }} />
                   <Bar dataKey="value" name="% Employees" fill="#2196F3" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">At Risk By Overtime</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={Object.entries(stats.byOvertime).map(([name, d]) => ({ name, atRisk: d.atRisk, safe: d.total - d.atRisk }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+                  <YAxis stroke="#9ca3af" fontSize={11} />
+                  <Tooltip contentStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#EF5350" />
+                  <Bar dataKey="safe" name="Safe" stackId="a" fill="#90CAF9" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

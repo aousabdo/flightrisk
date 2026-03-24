@@ -124,18 +124,41 @@ export default function WhatIfAnalysis() {
 
       {tab === 'whatif' && (
         <div className="space-y-4">
-          {/* Department filter */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600">Select Department</label>
-            <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded text-sm">
-              <option value="">All</option>
-              {departments.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
+          {/* Department filter + Summary */}
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="text-sm text-gray-600">Select Department</label>
+              <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+                className="ml-2 px-3 py-1.5 border border-gray-300 rounded text-sm">
+                <option value="">All</option>
+                {departments.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-4 ml-auto">
+              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-xs text-gray-500">At-Risk Employees</p>
+                <p className="text-lg font-bold text-red-600">{atRisk.length}</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-xs text-gray-500">Avg Risk</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {atRisk.length > 0 ? ((atRisk.reduce((s, e) => s + (e.prob_of_attrition || 0), 0) / atRisk.length) * 100).toFixed(0) : 0}%
+                </p>
+              </div>
+              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-xs text-gray-500">Total Cost Exposure</p>
+                <p className="text-lg font-bold text-purple-600">{formatCurrency(atRisk.reduce((s, e) => s + (e.attrition_cost || 0), 0))}</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-xs text-gray-500">Selected</p>
+                <p className="text-lg font-bold text-blue-600">{selectedRows.size}</p>
+              </div>
+            </div>
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Scatter Plot */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="lg:col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h3 className="text-sm text-gray-600 mb-3">Attrition Cost by Employee Score for Employees who are predicted Leave</h3>
             <ResponsiveContainer width="100%" height={350}>
               <ScatterChart margin={{ bottom: 20 }}>
@@ -171,6 +194,36 @@ export default function WhatIfAnalysis() {
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Right panel: Top risk employees */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Highest Risk Employees</h3>
+            <div className="space-y-2 max-h-[320px] overflow-y-auto">
+              {atRisk.slice(0, 15).map(emp => (
+                <button
+                  key={emp.EmployeeNumber}
+                  onClick={() => toggleRow(emp.EmployeeNumber)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors border ${
+                    selectedRows.has(emp.EmployeeNumber)
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium truncate">{emp.Name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      (emp.prob_of_attrition || 0) >= 0.9 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {((emp.prob_of_attrition || 0) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{emp.JobRole} &middot; {formatCurrency(emp.attrition_cost || 0)}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2 text-center">Click to select/deselect for analysis</p>
+          </div>
           </div>
 
           {/* Controls */}
