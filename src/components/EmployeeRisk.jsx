@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { CheckCircle, XCircle, AlertTriangle, Search, Download } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrencyFull } from '../lib/costs';
 
@@ -13,6 +13,7 @@ export default function EmployeeRisk() {
   const [deptFilter, setDeptFilter] = useState([]);
   const [roleFilter, setRoleFilter] = useState([]);
   const [riskThreshold, setRiskThreshold] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Auto-select first employee
   const filteredEmployees = useMemo(() => {
@@ -150,9 +151,11 @@ export default function EmployeeRisk() {
                   {/* Employee Card */}
                   <div className="bg-blue-600 text-white rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold">
-                        {(employee.Name || '').split(' ').map(n => n[0]).join('')}
-                      </div>
+                      <img
+                        src={`https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(employee.Name)}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                        alt={employee.Name}
+                        className="w-12 h-12 rounded-full bg-white/20 object-cover"
+                      />
                       <div>
                         <p className="font-semibold">{employee.Name}</p>
                         <p className="text-sm text-white/80">{employee.JobRole}</p>
@@ -183,9 +186,35 @@ export default function EmployeeRisk() {
             </div>
           </div>
 
-          {/* Right Sidebar - Filters */}
-          <div className="w-full lg:w-72 bg-gray-800 text-white p-5 space-y-5">
-            <h3 className="text-base font-semibold">Employee Risk Filters</h3>
+          {/* Overlay for mobile */}
+          {filtersOpen && (
+            <div className="fixed inset-0 bg-black/30 z-30 lg:z-30" onClick={() => setFiltersOpen(false)} />
+          )}
+
+          {/* Filter toggle button (visible when sidebar closed) */}
+          {!filtersOpen && (
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className="fixed right-0 top-1/3 z-30 bg-gray-800 text-white px-2 py-3 rounded-l-lg shadow-lg hover:bg-gray-700 transition-colors"
+              title="Open Filters"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Right Sidebar - Filters (collapsible) */}
+          <div className={`
+            fixed lg:static right-0 top-0 h-full z-40
+            w-72 bg-gray-800 text-white p-5 space-y-5
+            transform transition-transform duration-300 ease-in-out overflow-y-auto
+            ${filtersOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-full'}
+          `}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Employee Risk Filters</h3>
+              <button onClick={() => setFiltersOpen(false)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             {/* Risk Threshold */}
             <div>
