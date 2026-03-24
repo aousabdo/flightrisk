@@ -160,8 +160,8 @@ export default function WhatIfAnalysis() {
           {/* Scatter Plot */}
           <div className="lg:col-span-3 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h3 className="text-sm text-gray-600 mb-3">Attrition Cost by Employee Score for Employees who are predicted Leave</h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <ScatterChart margin={{ bottom: 20 }}>
+            <ResponsiveContainer width="100%" height={400}>
+              <ScatterChart margin={{ bottom: 20, right: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="x" type="number" name="Employee Score" stroke="#9ca3af" fontSize={11}
                   domain={['auto', 'auto']} tickCount={8}
@@ -180,15 +180,16 @@ export default function WhatIfAnalysis() {
                     </div>
                   );
                 }} />
-                <Scatter data={scatterData}>
+                <Scatter data={scatterData} onClick={(data) => data && toggleRow(data.id)}>
                   {scatterData.map((entry, i) => (
                     <Cell
                       key={i}
-                      fill={selectedRows.has(entry.id) ? '#ef4444' : '#4299e1'}
-                      fillOpacity={0.6}
-                      r={selectedRows.has(entry.id) ? 6 : 4}
+                      fill={selectedRows.has(entry.id) ? '#ef4444' : '#93bbf0'}
+                      fillOpacity={selectedRows.has(entry.id) ? 0.9 : 0.5}
+                      r={selectedRows.has(entry.id) ? 8 : 5}
+                      stroke={selectedRows.has(entry.id) ? '#dc2626' : 'none'}
+                      strokeWidth={selectedRows.has(entry.id) ? 2 : 0}
                       cursor="pointer"
-                      onClick={() => toggleRow(entry.id)}
                     />
                   ))}
                 </Scatter>
@@ -199,8 +200,8 @@ export default function WhatIfAnalysis() {
           {/* Right panel: Top risk employees */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Highest Risk Employees</h3>
-            <div className="space-y-2 max-h-[320px] overflow-y-auto">
-              {atRisk.slice(0, 15).map(emp => (
+            <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+              {atRisk.slice(0, 30).map(emp => (
                 <button
                   key={emp.EmployeeNumber}
                   onClick={() => toggleRow(emp.EmployeeNumber)}
