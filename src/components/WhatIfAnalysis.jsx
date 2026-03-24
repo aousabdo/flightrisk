@@ -140,9 +140,10 @@ export default function WhatIfAnalysis() {
             <ResponsiveContainer width="100%" height={350}>
               <ScatterChart margin={{ bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="x" name="Employee Score" stroke="#9ca3af" fontSize={11}
+                <XAxis dataKey="x" type="number" name="Employee Score" stroke="#9ca3af" fontSize={11}
+                  domain={['auto', 'auto']} tickCount={8}
                   label={{ value: 'Employee Score', position: 'bottom', fill: '#6b7280', fontSize: 11 }} />
-                <YAxis dataKey="y" name="Attrition Cost ($)" stroke="#9ca3af" fontSize={11}
+                <YAxis dataKey="y" type="number" name="Attrition Cost ($)" stroke="#9ca3af" fontSize={11}
                   tickFormatter={v => formatCurrency(v)} />
                 <Tooltip content={({ payload }) => {
                   if (!payload?.length) return null;

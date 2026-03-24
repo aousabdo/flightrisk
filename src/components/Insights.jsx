@@ -214,6 +214,11 @@ export default function Insights() {
             <HBarChart data={roleBar} title="By Job Role" />
             <HBarChart data={incomeBar} title="By Monthly Income" />
           </div>
+          <div className="flex justify-end pt-2">
+            <button onClick={() => setTab('predicted')} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-500">
+              Predicted Attrition &rarr;
+            </button>
+          </div>
         </div>
       )}
 
@@ -227,6 +232,14 @@ export default function Insights() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <HBarChart data={atRiskRoleBar} title="Employees At Risk By Job Role" />
             <HBarChart data={atRiskIncomeBar} title="Employees At Risk By Monthly Income" />
+          </div>
+          <div className="flex justify-between pt-2">
+            <button onClick={() => setTab('current')} className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+              &larr; Company Current Status
+            </button>
+            <button onClick={() => setTab('analysis')} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-500">
+              Attrition Analysis &rarr;
+            </button>
           </div>
         </div>
       )}
@@ -318,6 +331,11 @@ export default function Insights() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          </div>
+          <div className="flex justify-start pt-2">
+            <button onClick={() => setTab('predicted')} className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+              &larr; Predicted Attrition
+            </button>
           </div>
         </div>
       )}
