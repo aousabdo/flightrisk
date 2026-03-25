@@ -206,9 +206,9 @@ function DepartmentDetail({ dept, employees, onBack }) {
         <StatCard icon={DollarSign} label="Cost Exposure" value={formatCurrency(totalCost)} color="purple" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '650px' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '750px' }}>
         {/* Left: Charts stacked - match right column height */}
-        <div className="lg:col-span-2 flex flex-col gap-4" style={{ height: '650px' }}>
+        <div className="lg:col-span-2 flex flex-col gap-4" style={{ height: '750px' }}>
           {/* Risk by Role */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex-1">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Risk by Role</h3>
@@ -246,7 +246,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
         </div>
 
         {/* Right: Scrollable top risk employees - same height */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col" style={{ height: '650px' }}>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col" style={{ height: '750px' }}>
           <h3 className="text-sm font-semibold text-gray-700 mb-3 shrink-0">Highest Risk Employees</h3>
           <div className="space-y-2 overflow-y-auto flex-1 pr-1">
             {topRisk.map((emp, i) => {
