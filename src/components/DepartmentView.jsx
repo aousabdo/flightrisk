@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
+import ExportButton from './ExportButton';
 
 const RISK_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
 const DEPT_COLORS = { 'Sales': '#3b82f6', 'Research & Development': '#8b5cf6', 'Human Resources': '#06b6d4' };
@@ -322,7 +323,10 @@ export default function DepartmentView() {
 
   return (
     <div className="p-6 animate-fade-in">
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">Department Explorer</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-gray-800">Department Explorer</h2>
+        <ExportButton data={employees} filename="department-data" />
+      </div>
       <p className="text-sm text-gray-500 mb-5">Click a department card to explore roles, risk, and employees</p>
 
       {/* Summary Cards */}

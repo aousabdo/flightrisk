@@ -5,10 +5,13 @@ import {
 } from 'recharts';
 import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
+import { useModal } from '../hooks/useModal';
 import { formatCurrencyFull } from '../lib/costs';
+import ExportButton from './ExportButton';
 
 export default function EmployeeRisk() {
   const { employees, explanations, departments, jobRoles, loading } = useData();
+  const { openEmployee } = useModal();
   const [selectedId, setSelectedId] = useState(null);
   const [deptFilter, setDeptFilter] = useState([]);
   const [roleFilter, setRoleFilter] = useState([]);
@@ -58,8 +61,15 @@ export default function EmployeeRisk() {
       <div className="relative bg-gradient-to-r from-[#1a237e]/90 to-[#0d47a1]/80 text-white overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1200&q=80')] bg-cover bg-center mix-blend-overlay opacity-40" />
         <div className="relative px-6 py-8">
-          <h1 className="text-2xl font-bold mb-1">Employee Attrition Prediction & Prevention</h1>
-          <p className="text-white/80 text-sm">Select an employee to learn how best to prevent their attrition</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold mb-1">Employee Attrition Prediction & Prevention</h1>
+              <p className="text-white/80 text-sm">Select an employee to learn how best to prevent their attrition</p>
+            </div>
+            <div className="print:hidden">
+              <ExportButton data={filteredEmployees} filename="employee-risk-data" />
+            </div>
+          </div>
 
           {/* Employee Selector */}
           <div className="mt-4 max-w-xs">
@@ -162,6 +172,12 @@ export default function EmployeeRisk() {
                       </div>
                     </div>
                     <p className="text-sm font-medium">{employee.Department}</p>
+                    <button
+                      onClick={() => openEmployee(employee)}
+                      className="mt-3 w-full px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded transition-colors"
+                    >
+                      View Full Details
+                    </button>
                   </div>
 
                   {/* Personal Development */}

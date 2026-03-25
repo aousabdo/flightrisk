@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
-  UserCheck, GitBranch, BarChart3, PieChart, FlaskConical,
-  ChevronLeft, ChevronRight, Menu,
+  UserCheck, GitBranch, PieChart, FlaskConical,
+  ChevronLeft, ChevronRight, Menu, Search, Bell, X, DollarSign,
+  AlertTriangle, ShieldAlert,
 } from 'lucide-react';
+import { useData } from '../hooks/useEmployees';
+import { useModal } from '../hooks/useModal';
+import { formatCurrency } from '../lib/costs';
+import EmployeeModal from './EmployeeModal';
+import ComparePanel from './ComparePanel';
 
 const NAV_ITEMS = [
   { to: '/', icon: UserCheck, label: 'Employee Risk' },
@@ -12,9 +18,203 @@ const NAV_ITEMS = [
   { to: '/what-if', icon: FlaskConical, label: 'What-if Analysis' },
 ];
 
+/* ─── Global Search ─── */
+function GlobalSearch() {
+  const { employees } = useData();
+  const { openEmployee } = useModal();
+  const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return employees
+      .filter(e =>
+        e.Name.toLowerCase().includes(q) ||
+        e.Department.toLowerCase().includes(q) ||
+        e.JobRole.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [query, employees]);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        setFocused(false);
+        inputRef.current?.blur();
+      }
+    }
+    function onClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setFocused(false);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, []);
+
+  function selectEmployee(emp) {
+    openEmployee(emp);
+    setQuery('');
+    setFocused(false);
+  }
+
+  const showDropdown = focused && query.trim().length > 0;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          placeholder="Search employees..."
+          className="w-56 lg:w-72 pl-8 pr-3 py-1.5 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+        />
+        {query && (
+          <button
+            onClick={() => { setQuery(''); inputRef.current?.focus(); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      {showDropdown && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+          {results.length === 0 ? (
+            <div className="px-3 py-4 text-sm text-gray-400 text-center">No employees found</div>
+          ) : (
+            results.map(emp => {
+              const risk = ((emp.prob_of_attrition || 0) * 100).toFixed(0);
+              return (
+                <button
+                  key={emp.EmployeeNumber}
+                  onClick={() => selectEmployee(emp)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                >
+                  <img
+                    src={`https://i.pravatar.cc/40?u=${encodeURIComponent(emp.Name)}`}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{emp.Name}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{emp.JobRole} &middot; {emp.Department}</p>
+                  </div>
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                    risk >= 70 ? 'bg-red-100 text-red-700'
+                    : risk >= 50 ? 'bg-orange-100 text-orange-700'
+                    : risk >= 30 ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-green-100 text-green-700'
+                  }`}>
+                    {risk}%
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Notification Bell ─── */
+function NotificationBell() {
+  const { employees, stats } = useData();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const notifications = useMemo(() => {
+    if (!employees.length) return { critical: 0, high: 0, totalCost: 0, hasCritical: false };
+    const critical = employees.filter(e => (e.prob_of_attrition || 0) >= 0.8).length;
+    const high = employees.filter(e => (e.prob_of_attrition || 0) >= 0.5).length;
+    const totalCost = employees
+      .filter(e => e.label === 'Yes')
+      .reduce((sum, e) => sum + (e.attrition_cost || 0), 0);
+    return { critical, high, totalCost, hasCritical: critical > 0 };
+  }, [employees]);
+
+  useEffect(() => {
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`relative p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors ${
+          notifications.hasCritical ? 'animate-pulse-bell' : ''
+        }`}
+      >
+        <Bell className="w-5 h-5" />
+        {notifications.high > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+            {notifications.high > 9 ? '9+' : notifications.high}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+          <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Alerts</p>
+          {notifications.critical > 0 && (
+            <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-red-50">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">{notifications.critical} employees at critical risk</p>
+                <p className="text-[11px] text-gray-500">Attrition probability &gt; 80%</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-orange-50">
+            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800">{notifications.high} employees at high risk</p>
+              <p className="text-[11px] text-gray-500">Attrition probability &gt; 50%</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <DollarSign className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800">Total cost exposure</p>
+              <p className="text-[11px] text-gray-500">{formatCurrency(notifications.totalCost)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { employees } = useData();
+
+  const highRiskCount = useMemo(() =>
+    employees.filter(e => (e.prob_of_attrition || 0) > 0.5).length,
+    [employees]
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
@@ -56,7 +256,18 @@ export default function Layout() {
               `}
             >
               <Icon className="w-5 h-5 shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
+              {!collapsed && (
+                <span className="truncate flex-1">{label}</span>
+              )}
+              {/* Badge for Employee Risk */}
+              {to === '/' && highRiskCount > 0 && !collapsed && (
+                <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {highRiskCount > 99 ? '99' : highRiskCount}
+                </span>
+              )}
+              {to === '/' && highRiskCount > 0 && collapsed && (
+                <span className="absolute left-9 top-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
             </NavLink>
           ))}
         </nav>
@@ -89,6 +300,16 @@ export default function Layout() {
 
           <div className="flex-1" />
 
+          {/* Search */}
+          <div className="hidden sm:block mr-3">
+            <GlobalSearch />
+          </div>
+
+          {/* Notifications */}
+          <div className="mr-3">
+            <NotificationBell />
+          </div>
+
           {/* User */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">LS</div>
@@ -97,15 +318,21 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="flex-1 overflow-y-auto bg-gray-50 print:bg-white">
           <Outlet />
         </div>
 
         {/* Footer */}
-        <footer className="h-8 border-t border-gray-200 flex items-center px-4 bg-white">
+        <footer className="h-8 border-t border-gray-200 flex items-center px-4 bg-white print:hidden">
           <span className="text-[10px] text-gray-400">&copy; 2026 Analytica Data Science Solution</span>
         </footer>
       </main>
+
+      {/* Employee Detail Modal (slide-over) */}
+      <EmployeeModal />
+
+      {/* Compare Panel (floating button + overlay) */}
+      <ComparePanel />
     </div>
   );
 }

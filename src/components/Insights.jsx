@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
+import ExportButton from './ExportButton';
 
 const COLORS = ['#2196F3', '#FF5722', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
 const DEPT_COLORS = { 'Research & Development': '#4CAF50', 'Sales': '#FF9800', 'Human Resources': '#2196F3' };
@@ -214,6 +215,11 @@ export default function Insights() {
 
   return (
     <div className="p-6 animate-fade-in">
+      {/* Header with export */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold text-gray-800">Insights</h1>
+        <ExportButton data={employees} filename="insights-data" />
+      </div>
       {/* Tabs */}
       <div className="flex gap-0 border-b border-gray-200 mb-6">
         <TabButton active={tab === 'current'} label="Attrition at Company Current Status" onClick={() => setTab('current')} />

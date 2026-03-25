@@ -7,6 +7,7 @@ import { Play, RotateCcw, TrendingUp, ChevronUp } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { predictAttrition } from '../lib/predict';
 import { formatCurrency, formatCurrencyFull } from '../lib/costs';
+import ExportButton from './ExportButton';
 
 export default function WhatIfAnalysis() {
   const { employees, departments, modelReady, loading } = useData();
@@ -110,6 +111,11 @@ export default function WhatIfAnalysis() {
 
   return (
     <div className="p-6 animate-fade-in">
+      {/* Header with export */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold text-gray-800">What-if Analysis</h1>
+        <ExportButton data={employees} filename="whatif-data" />
+      </div>
       {/* Tabs */}
       <div className="flex gap-0 border-b border-gray-200 mb-4">
         <button onClick={() => setTab('whatif')}
