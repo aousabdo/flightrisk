@@ -206,13 +206,13 @@ function DepartmentDetail({ dept, employees, onBack }) {
         <StatCard icon={DollarSign} label="Cost Exposure" value={formatCurrency(totalCost)} color="purple" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Charts stacked */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '650px' }}>
+        {/* Left: Charts stacked - match right column height */}
+        <div className="lg:col-span-2 flex flex-col gap-4" style={{ height: '650px' }}>
           {/* Risk by Role */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex-1">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Risk by Role</h3>
-            <ResponsiveContainer width="100%" height={byRole.length * 40 + 40}>
+            <ResponsiveContainer width="100%" height="85%">
               <BarChart data={byRole} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" stroke="#9ca3af" fontSize={11} />
@@ -226,11 +226,11 @@ function DepartmentDetail({ dept, employees, onBack }) {
           </div>
 
           {/* Risk by Factor - 2-col grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
             {byFactor.slice(0, 2).map(({ label, data }) => (
-              <div key={label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div key={label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Risk by {label}</h3>
-                <ResponsiveContainer width="100%" height={data.length * 36 + 30}>
+                <ResponsiveContainer width="100%" height="90%">
                   <BarChart data={data} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" stroke="#9ca3af" fontSize={10} />
@@ -245,8 +245,8 @@ function DepartmentDetail({ dept, employees, onBack }) {
           </div>
         </div>
 
-        {/* Right: Scrollable top risk employees */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col" style={{ maxHeight: '600px' }}>
+        {/* Right: Scrollable top risk employees - same height */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col" style={{ height: '650px' }}>
           <h3 className="text-sm font-semibold text-gray-700 mb-3 shrink-0">Highest Risk Employees</h3>
           <div className="space-y-2 overflow-y-auto flex-1 pr-1">
             {topRisk.map((emp, i) => {
