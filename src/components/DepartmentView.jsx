@@ -12,6 +12,7 @@ import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
 import ExportButton from './ExportButton';
 import { DepartmentSkeleton } from './Skeletons';
+import AnimatedCounter from './AnimatedCounter';
 
 const RISK_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
 const DEPT_COLORS = { 'Sales': '#3b82f6', 'Research & Development': '#8b5cf6', 'Human Resources': '#06b6d4' };
@@ -294,9 +295,9 @@ function DepartmentDetail({ dept, employees, onBack }) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Users} label="Headcount" value={deptEmps.length} color="blue" />
-        <StatCard icon={AlertTriangle} label="At Risk" value={`${atRiskEmps.length} (${pct}%)`} color="red" />
-        <StatCard icon={Briefcase} label="Roles" value={byRole.length} color="green" />
+        <StatCard icon={Users} label="Headcount" value={<AnimatedCounter value={deptEmps.length} />} color="blue" />
+        <StatCard icon={AlertTriangle} label="At Risk" value={<><AnimatedCounter value={atRiskEmps.length} /> ({pct}%)</>} color="red" />
+        <StatCard icon={Briefcase} label="Roles" value={<AnimatedCounter value={byRole.length} />} color="green" />
         <StatCard icon={DollarSign} label="Cost Exposure" value={formatCurrency(totalCost)} color="purple" />
       </div>
 
@@ -424,9 +425,9 @@ export default function DepartmentView() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Users} label="Total Workforce" value={employees.length.toLocaleString()} color="blue" />
-        <StatCard icon={AlertTriangle} label="At Risk" value={`${totalAtRisk} (${orgPct}%)`} color="red" />
-        <StatCard icon={Building2} label="Departments" value={Object.keys(deptData).length} color="green" />
+        <StatCard icon={Users} label="Total Workforce" value={<AnimatedCounter value={employees.length} />} color="blue" />
+        <StatCard icon={AlertTriangle} label="At Risk" value={<><AnimatedCounter value={totalAtRisk} /> ({orgPct}%)</>} color="red" />
+        <StatCard icon={Building2} label="Departments" value={<AnimatedCounter value={Object.keys(deptData).length} />} color="green" />
         <StatCard icon={DollarSign} label="Total Cost Exposure" value={formatCurrency(totalCost)} color="purple" />
       </div>
 

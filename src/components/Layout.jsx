@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   UserCheck, GitBranch, PieChart, FlaskConical,
   ChevronLeft, ChevronRight, Menu, Search, Bell, X, DollarSign,
   AlertTriangle, ShieldAlert, LayoutDashboard, Activity, Calculator,
+  HelpCircle, Settings,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { useModal } from '../hooks/useModal';
 import { formatCurrency } from '../lib/costs';
 import EmployeeModal from './EmployeeModal';
 import ComparePanel from './ComparePanel';
+import OnboardingTour from './OnboardingTour';
 
 const NAV_SECTIONS = [
   {
@@ -246,7 +248,9 @@ function NotificationBell() {
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showTour, setShowTour] = useState(() => !localStorage.getItem('flightrisk-tour-done'));
   const { employees } = useData();
+  const navigate = useNavigate();
 
   const highRiskCount = useMemo(() =>
     employees.filter(e => (e.prob_of_attrition || 0) > 0.5).length,
@@ -347,14 +351,32 @@ export default function Layout() {
           <div className="flex-1" />
 
           {/* Search */}
-          <div className="hidden sm:block mr-3">
+          <div data-tour="search" className="hidden sm:block mr-3">
             <GlobalSearch />
           </div>
 
           {/* Notifications */}
-          <div className="mr-3">
+          <div data-tour="notifications" className="mr-3">
             <NotificationBell />
           </div>
+
+          {/* Help / Restart Tour */}
+          <button
+            onClick={() => setShowTour(true)}
+            className="mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="Take a guided tour"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={() => navigate('/settings')}
+            className="mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
 
           {/* User */}
           <div className="flex items-center gap-2">
@@ -379,6 +401,9 @@ export default function Layout() {
 
       {/* Compare Panel (floating button + overlay) */}
       <ComparePanel />
+
+      {/* Onboarding Tour */}
+      {showTour && <OnboardingTour onComplete={() => setShowTour(false)} />}
     </div>
   );
 }

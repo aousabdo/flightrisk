@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Users, AlertTriangle, DollarSign, TrendingUp,
-  Briefcase, Clock, MapPin, Award, ArrowRight,
+  Briefcase, Clock, MapPin, Award, ArrowRight, Sparkles, Printer,
 } from 'lucide-react';
+import AnimatedCounter from './AnimatedCounter';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie, Legend,
@@ -11,6 +12,8 @@ import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
 import { CHART, RISK, CATEGORICAL } from '../lib/colors';
 import { DepartmentSkeleton } from './Skeletons';
+import InsightEngine from './InsightEngine';
+import ExecutiveReport from './ExecutiveReport';
 
 const RISK_BUCKETS = [
   { key: 'critical', label: 'Critical', min: 0.7, color: RISK.critical },
@@ -168,6 +171,7 @@ function ChartTooltip({ active, payload, label }) {
 
 export default function ExecutiveSummary() {
   const { employees, loading, stats } = useData();
+  const [showReport, setShowReport] = useState(false);
 
   const derived = useMemo(() => {
     if (!employees.length || !stats) return null;
@@ -238,17 +242,26 @@ export default function ExecutiveSummary() {
   return (
     <div className="p-6 animate-fade-in space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Executive Summary</h1>
-        <p className="text-sm text-gray-500 mt-1">Organization-wide flight risk overview and recommended actions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Executive Summary</h1>
+          <p className="text-sm text-gray-500 mt-1">Organization-wide flight risk overview and recommended actions</p>
+        </div>
+        <button
+          onClick={() => setShowReport(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors print:hidden"
+        >
+          <Printer className="w-4 h-4" />
+          Generate Executive Report
+        </button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="kpi-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={Users}
           label="Total Workforce"
-          value={totalEmployees.toLocaleString()}
+          value={<AnimatedCounter value={totalEmployees} />}
           subtitle={`Across ${Object.keys(stats.byDept).length} departments`}
           accent="text-blue-600"
           iconBg="bg-blue-50"
@@ -256,7 +269,7 @@ export default function ExecutiveSummary() {
         <KPICard
           icon={AlertTriangle}
           label="At-Risk Employees"
-          value={atRiskCount}
+          value={<AnimatedCounter value={atRiskCount} />}
           subtitle={`${atRiskPct}% of total workforce`}
           accent="text-red-600"
           iconBg="bg-red-50"
@@ -264,7 +277,13 @@ export default function ExecutiveSummary() {
         <KPICard
           icon={DollarSign}
           label="Total Cost Exposure"
-          value={formatCurrency(totalCost)}
+          value={
+            totalCost >= 1000000
+              ? <AnimatedCounter value={parseFloat((totalCost / 1000000).toFixed(1))} prefix="$" suffix="M" decimals={1} />
+              : totalCost >= 1000
+                ? <AnimatedCounter value={Math.round(totalCost / 1000)} prefix="$" suffix="K" />
+                : <AnimatedCounter value={Math.round(totalCost)} prefix="$" />
+          }
           subtitle="If all at-risk employees leave"
           accent="text-orange-600"
           iconBg="bg-orange-50"
@@ -272,11 +291,20 @@ export default function ExecutiveSummary() {
         <KPICard
           icon={TrendingUp}
           label="Avg Risk Score"
-          value={`${avgRiskPct}%`}
+          value={<AnimatedCounter value={parseFloat(avgRiskPct)} suffix="%" decimals={1} />}
           subtitle={avgRisk >= 0.3 ? 'Elevated - action needed' : 'Within acceptable range'}
           accent={avgRisk >= 0.3 ? 'text-amber-600' : 'text-green-600'}
           iconBg={avgRisk >= 0.3 ? 'bg-amber-50' : 'bg-green-50'}
         />
+      </div>
+
+      {/* AI-Generated Insights */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-5 h-5 text-purple-500" />
+          <h2 className="text-lg font-semibold text-gray-800">AI-Generated Insights</h2>
+        </div>
+        <InsightEngine employees={employees} />
       </div>
 
       {/* Middle section: Risk Distribution + Top Actions */}
@@ -443,6 +471,9 @@ export default function ExecutiveSummary() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Executive Report Modal */}
+      {showReport && <ExecutiveReport onClose={() => setShowReport(false)} />}
     </div>
   );
 }

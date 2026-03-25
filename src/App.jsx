@@ -10,6 +10,7 @@ import Insights from './components/Insights';
 import WhatIfAnalysis from './components/WhatIfAnalysis';
 import CostCalculator from './components/CostCalculator';
 import Timeline from './components/Timeline';
+import Settings from './components/Settings';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/what-if" element={<WhatIfAnalysis />} />
               <Route path="/cost-calculator" element={<CostCalculator />} />
               <Route path="/timeline" element={<Timeline />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
         </CompareProvider>
