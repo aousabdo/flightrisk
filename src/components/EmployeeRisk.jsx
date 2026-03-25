@@ -152,7 +152,7 @@ export default function EmployeeRisk() {
                   <div className="bg-blue-600 text-white rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <img
-                        src={`https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(employee.Name)}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
+                        src={`https://i.pravatar.cc/150?u=${encodeURIComponent(employee.Name)}`}
                         alt={employee.Name}
                         className="w-12 h-12 rounded-full bg-white/20 object-cover"
                       />
