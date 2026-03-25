@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, CartesianGrid, ReferenceLine,
@@ -6,12 +6,14 @@ import {
 import {
   X, Briefcase, MapPin, Clock, DollarSign,
   GraduationCap, Heart, Lightbulb, Target, Cog, UserPlus,
+  FileText, ArrowLeft,
 } from 'lucide-react';
 import { useModal } from '../hooks/useModal';
 import { useCompare } from '../hooks/useCompare';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrencyFull } from '../lib/costs';
 import { getRiskLevel } from '../lib/scores';
+import RetentionPlaybook from './RetentionPlaybook';
 
 function RiskGauge({ probability }) {
   const pct = (probability || 0) * 100;
@@ -77,6 +79,12 @@ export default function EmployeeModal() {
   const { selectedEmployee: employee, closeEmployee } = useModal();
   const { addToCompare, compareList } = useCompare();
   const { explanations } = useData();
+  const [showPlaybook, setShowPlaybook] = useState(false);
+
+  // Reset playbook view when employee changes
+  useEffect(() => {
+    setShowPlaybook(false);
+  }, [employee?.EmployeeNumber]);
 
   useEffect(() => {
     function onKey(e) {
@@ -151,6 +159,17 @@ export default function EmployeeModal() {
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Playbook Toggle */}
+          {showPlaybook ? (
+            <div>
+              <button onClick={() => setShowPlaybook(false)}
+                className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 mb-4 print:hidden">
+                <ArrowLeft className="w-4 h-4" /> Back to Profile
+              </button>
+              <RetentionPlaybook employee={employee} explanations={explanations} />
+            </div>
+          ) : (
+          <>
           {/* Risk Prediction Badge */}
           <div className="flex items-center justify-between">
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -244,6 +263,14 @@ export default function EmployeeModal() {
             <p className="text-xl font-bold text-white">{formatCurrencyFull(employee.attrition_cost || 0)}</p>
             <p className="text-[10px] text-slate-500 mt-0.5">Estimated cost if employee leaves</p>
           </div>
+
+          {/* Generate Playbook Button */}
+          <button onClick={() => setShowPlaybook(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+            <FileText className="w-4 h-4" /> Generate Retention Playbook
+          </button>
+          </>
+          )}
         </div>
       </div>
     </>

@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
+  ScatterChart, Scatter, ZAxis, ReferenceLine,
+  LineChart, Line,
 } from 'recharts';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
@@ -49,6 +51,8 @@ const TAB_LIST = [
   { key: 'current', label: 'Attrition at Company Current Status' },
   { key: 'predicted', label: 'Predicted Attrition: Current Employees' },
   { key: 'analysis', label: 'Predicted Employee Attrition Analysis' },
+  { key: 'cohort', label: 'Cohort Analysis' },
+  { key: 'compensation', label: 'Compensation Analysis' },
 ];
 
 export default function Insights() {
@@ -373,13 +377,310 @@ export default function Insights() {
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="flex justify-start pt-4">
+          <div className="flex justify-between pt-4">
             <button onClick={() => setTab('predicted')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
               &larr; Previous: Predicted Attrition
+            </button>
+            <button onClick={() => setTab('cohort')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              Next: Cohort Analysis &rarr;
             </button>
           </div>
         </div>
       )}
+
+      {tab === 'cohort' && <CohortAnalysisTab employees={employees} stats={stats} setTab={setTab} />}
+      {tab === 'compensation' && <CompensationAnalysisTab employees={employees} stats={stats} setTab={setTab} />}
+    </div>
+  );
+}
+
+/* ─── Cohort Analysis Tab ─── */
+function CohortAnalysisTab({ employees, stats, setTab }) {
+  const tenureBuckets = useMemo(() => {
+    const buckets = [
+      { label: '0-1yr', min: 0, max: 1 },
+      { label: '1-2yr', min: 1, max: 2 },
+      { label: '2-3yr', min: 2, max: 3 },
+      { label: '3-5yr', min: 3, max: 5 },
+      { label: '5-10yr', min: 5, max: 10 },
+      { label: '10+yr', min: 10, max: 999 },
+    ];
+    return buckets.map(b => {
+      const inBucket = employees.filter(e => (e.YearsAtCompany || 0) >= b.min && (e.YearsAtCompany || 0) < b.max);
+      const atRisk = inBucket.filter(e => e.label === 'Yes').length;
+      const total = inBucket.length;
+      const rate = total > 0 ? ((atRisk / total) * 100).toFixed(1) : 0;
+      return { name: b.label, atRisk, total, rate: Number(rate) };
+    });
+  }, [employees]);
+
+  const hireYearData = useMemo(() => {
+    const byYear = {};
+    employees.forEach(e => {
+      const hireYear = Math.floor(2026 - (e.YearsAtCompany || 0));
+      if (!byYear[hireYear]) byYear[hireYear] = { risks: [], count: 0 };
+      byYear[hireYear].risks.push(e.prob_of_attrition || 0);
+      byYear[hireYear].count++;
+    });
+    const data = Object.entries(byYear)
+      .map(([year, d]) => ({
+        year: Number(year),
+        avgRisk: Number(((d.risks.reduce((s, v) => s + v, 0) / d.risks.length) * 100).toFixed(1)),
+        count: d.count,
+      }))
+      .sort((a, b) => a.year - b.year);
+    const overallAvg = data.length > 0 ? data.reduce((s, d) => s + d.avgRisk, 0) / data.length : 0;
+    return { data, overallAvg };
+  }, [employees]);
+
+  const newHireWarning = useMemo(() => {
+    const newHires = employees.filter(e => (e.YearsAtCompany || 0) <= 1);
+    const atRiskNew = newHires.filter(e => e.label === 'Yes');
+    const pct = newHires.length > 0 ? ((atRiskNew.length / newHires.length) * 100).toFixed(1) : 0;
+    return { total: newHires.length, atRisk: atRiskNew.length, pct: Number(pct) };
+  }, [employees]);
+
+  const newHireDonut = [
+    { name: 'At Risk', value: newHireWarning.atRisk },
+    { name: 'Safe', value: newHireWarning.total - newHireWarning.atRisk },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Tenure Cohort Risk */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Tenure Cohort Risk</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={tenureBuckets}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+            <YAxis stroke="#9ca3af" fontSize={11} />
+            <Tooltip contentStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="total" name="Total" fill="#93c5fd" radius={[3, 3, 0, 0]} label={{ position: 'top', fontSize: 9, fill: '#6b7280' }} />
+            <Bar dataKey="atRisk" name="At Risk" fill="#ef4444" radius={[3, 3, 0, 0]}>
+              {tenureBuckets.map((entry, i) => (
+                <Cell key={i} fill="#ef4444" />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="flex gap-2 mt-2 flex-wrap">
+          {tenureBuckets.map(b => (
+            <span key={b.name} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+              {b.name}: {b.rate}% attrition
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Hire Year Comparison */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Hire Year Comparison - Avg Risk by Hire Year</h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={hireYearData.data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="year" stroke="#9ca3af" fontSize={11} />
+            <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={v => `${v}%`} />
+            <Tooltip contentStyle={{ fontSize: 12 }} formatter={(v, name) => [`${v}%`, name === 'avgRisk' ? 'Avg Risk' : name]} />
+            <ReferenceLine y={hireYearData.overallAvg} stroke="#f59e0b" strokeDasharray="5 5"
+              label={{ value: `Avg: ${hireYearData.overallAvg.toFixed(1)}%`, position: 'right', fontSize: 10, fill: '#f59e0b' }} />
+            <Line type="monotone" dataKey="avgRisk" stroke="#2196F3" strokeWidth={2} dot={(props) => {
+              const { cx, cy, payload } = props;
+              const isAbove = payload.avgRisk > hireYearData.overallAvg;
+              return <circle cx={cx} cy={cy} r={isAbove ? 5 : 3} fill={isAbove ? '#ef4444' : '#2196F3'} stroke="white" strokeWidth={1} />;
+            }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* New Hire Early Warning */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">New Hire Early Warning (Tenure &le; 1 Year)</h3>
+        <div className="flex items-center gap-6">
+          <ResponsiveContainer width={120} height={120}>
+            <PieChart>
+              <Pie data={newHireDonut} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={30}>
+                <Cell fill="#ef4444" />
+                <Cell fill="#e5e7eb" />
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div>
+            <p className="text-2xl font-bold text-red-600">{newHireWarning.atRisk}</p>
+            <p className="text-sm text-gray-600">new hires at risk out of {newHireWarning.total}</p>
+            <p className="text-lg font-semibold text-amber-600 mt-1">{newHireWarning.pct}%</p>
+            <p className="text-xs text-gray-500">early attrition risk rate</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-between pt-4">
+        <button onClick={() => setTab('analysis')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+          &larr; Previous: Attrition Analysis
+        </button>
+        <button onClick={() => setTab('compensation')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+          Next: Compensation Analysis &rarr;
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Compensation Analysis Tab ─── */
+function CompensationAnalysisTab({ employees, stats, setTab }) {
+  const DEPT_SCATTER_COLORS = { 'Research & Development': '#4CAF50', 'Sales': '#FF9800', 'Human Resources': '#2196F3' };
+
+  const scatterData = useMemo(() => {
+    const depts = [...new Set(employees.map(e => e.Department))];
+    return depts.map(dept => ({
+      dept,
+      data: employees.filter(e => e.Department === dept).map(e => ({
+        x: e.MonthlyIncome || 0,
+        y: (e.prob_of_attrition || 0) * 100,
+        z: Math.max(20, Math.min(200, (e.attrition_cost || 0) / 500)),
+        name: e.Name,
+        cost: e.attrition_cost || 0,
+      })),
+    }));
+  }, [employees]);
+
+  const medianIncome = useMemo(() => {
+    const incomes = employees.map(e => e.MonthlyIncome || 0).sort((a, b) => a - b);
+    const mid = Math.floor(incomes.length / 2);
+    return incomes.length % 2 === 0 ? (incomes[mid - 1] + incomes[mid]) / 2 : incomes[mid];
+  }, [employees]);
+
+  const salaryByDeptRisk = useMemo(() => {
+    const depts = {};
+    employees.forEach(e => {
+      if (!depts[e.Department]) depts[e.Department] = { atRiskSalaries: [], safeSalaries: [] };
+      if (e.label === 'Yes') depts[e.Department].atRiskSalaries.push(e.MonthlyIncome || 0);
+      else depts[e.Department].safeSalaries.push(e.MonthlyIncome || 0);
+    });
+    return Object.entries(depts).map(([name, d]) => {
+      const median = arr => {
+        if (arr.length === 0) return 0;
+        const s = [...arr].sort((a, b) => a - b);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m];
+      };
+      return {
+        name,
+        atRiskMedian: Math.round(median(d.atRiskSalaries)),
+        safeMedian: Math.round(median(d.safeSalaries)),
+      };
+    });
+  }, [employees]);
+
+  const compGapData = useMemo(() => {
+    const roles = {};
+    employees.forEach(e => {
+      if (!roles[e.JobRole]) roles[e.JobRole] = { atRiskSalaries: [], safeSalaries: [] };
+      if (e.label === 'Yes') roles[e.JobRole].atRiskSalaries.push(e.MonthlyIncome || 0);
+      else roles[e.JobRole].safeSalaries.push(e.MonthlyIncome || 0);
+    });
+    return Object.entries(roles).map(([role, d]) => {
+      const avg = arr => arr.length > 0 ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0;
+      const atRiskAvg = avg(d.atRiskSalaries);
+      const safeAvg = avg(d.safeSalaries);
+      return {
+        role,
+        atRiskAvg,
+        safeAvg,
+        gap: atRiskAvg - safeAvg,
+        atRiskCount: d.atRiskSalaries.length,
+        safeCount: d.safeSalaries.length,
+      };
+    }).sort((a, b) => a.gap - b.gap);
+  }, [employees]);
+
+  return (
+    <div className="space-y-6">
+      {/* Salary vs Risk Scatter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Salary vs Risk (by Department, sized by Attrition Cost)</h3>
+        <ResponsiveContainer width="100%" height={400}>
+          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis type="number" dataKey="x" name="Monthly Income" stroke="#9ca3af" fontSize={11}
+              tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} label={{ value: 'Monthly Income', position: 'bottom', fontSize: 11, fill: '#9ca3af' }} />
+            <YAxis type="number" dataKey="y" name="Risk %" stroke="#9ca3af" fontSize={11}
+              tickFormatter={v => `${v}%`} label={{ value: 'Attrition Risk %', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#9ca3af' }} />
+            <ZAxis type="number" dataKey="z" range={[20, 200]} />
+            <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ fontSize: 11 }}
+              formatter={(value, name) => {
+                if (name === 'Monthly Income') return [`$${value.toLocaleString()}`, name];
+                if (name === 'Risk %') return [`${value.toFixed(1)}%`, name];
+                return [value, name];
+              }} />
+            <ReferenceLine x={medianIncome} stroke="#94a3b8" strokeDasharray="5 5" />
+            <ReferenceLine y={50} stroke="#94a3b8" strokeDasharray="5 5" />
+            {scatterData.map(({ dept, data }) => (
+              <Scatter key={dept} name={dept} data={data} fill={DEPT_SCATTER_COLORS[dept] || '#2196F3'} fillOpacity={0.6} />
+            ))}
+          </ScatterChart>
+        </ResponsiveContainer>
+        <div className="flex items-center gap-6 mt-2 justify-center text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-300" /> Top-Left: Underpaid + High Risk</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-100 border border-green-300" /> Bottom-Right: Well-paid + Low Risk</span>
+        </div>
+      </div>
+
+      {/* Salary Distribution by Risk Status */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">Salary Distribution by Risk Status (Median by Department)</h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={salaryByDeptRisk}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} />
+            <YAxis stroke="#9ca3af" fontSize={11} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
+            <Tooltip contentStyle={{ fontSize: 12 }} formatter={v => [`$${v.toLocaleString()}`, '']} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="atRiskMedian" name="At Risk (Median)" fill="#ef4444" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="safeMedian" name="Safe (Median)" fill="#22c55e" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Compensation Gap Analysis Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Compensation Gap Analysis by Job Role</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-3 text-xs font-semibold text-gray-600">Job Role</th>
+                <th className="text-right py-2 px-3 text-xs font-semibold text-gray-600">At Risk Avg</th>
+                <th className="text-right py-2 px-3 text-xs font-semibold text-gray-600">Safe Avg</th>
+                <th className="text-right py-2 px-3 text-xs font-semibold text-gray-600">Gap</th>
+                <th className="text-center py-2 px-3 text-xs font-semibold text-gray-600">Flag</th>
+              </tr>
+            </thead>
+            <tbody>
+              {compGapData.map((row, i) => (
+                <tr key={row.role} className={`border-b border-gray-100 ${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'} ${row.gap < 0 ? 'bg-red-50' : ''}`}>
+                  <td className="py-2 px-3 text-gray-800 font-medium">{row.role}</td>
+                  <td className="py-2 px-3 text-right text-gray-600">${row.atRiskAvg.toLocaleString()}</td>
+                  <td className="py-2 px-3 text-right text-gray-600">${row.safeAvg.toLocaleString()}</td>
+                  <td className={`py-2 px-3 text-right font-semibold ${row.gap < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {row.gap < 0 ? '-' : '+'}${Math.abs(row.gap).toLocaleString()}
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    {row.gap < 0 && <span className="text-red-500 text-xs font-medium">Underpaid</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="flex justify-start pt-4">
+        <button onClick={() => setTab('cohort')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+          &larr; Previous: Cohort Analysis
+        </button>
+      </div>
     </div>
   );
 }

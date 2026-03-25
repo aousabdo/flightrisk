@@ -6,6 +6,7 @@ import {
 import {
   ChevronRight, ChevronDown, Building2, Briefcase, User, Layers,
   AlertTriangle, Users, DollarSign, TrendingUp, Shield,
+  Activity, Plane, Clock, ShieldCheck,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
@@ -15,6 +16,47 @@ import { DepartmentSkeleton } from './Skeletons';
 const RISK_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
 const DEPT_COLORS = { 'Sales': '#3b82f6', 'Research & Development': '#8b5cf6', 'Human Resources': '#06b6d4' };
 const DEPT_COLOR_LIST = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b'];
+
+/* ─── Semi-circular Health Gauge (80x80) ─── */
+function SemiGauge({ value, label, detail }) {
+  const pct = Math.max(0, Math.min(100, value));
+  const color = pct > 70 ? '#22c55e' : pct > 40 ? '#f59e0b' : '#ef4444';
+  // Arc from 180 to 0 degrees (semi-circle)
+  const r = 30;
+  const cx = 40;
+  const cy = 42;
+  const startAngle = Math.PI;
+  const endAngle = 0;
+  const totalArc = Math.PI * r;
+  const filledArc = (pct / 100) * totalArc;
+
+  // SVG arc: start at left, end at right
+  const x1 = cx - r;
+  const y1 = cy;
+  const x2 = cx + r;
+  const y2 = cy;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-col items-center" style={{ minWidth: 120 }}>
+      <svg width="80" height="50" viewBox="0 0 80 50">
+        {/* Background arc */}
+        <path d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+          fill="none" stroke="#e5e7eb" strokeWidth="7" strokeLinecap="round" />
+        {/* Filled arc */}
+        <path d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+          fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={`${filledArc} ${totalArc}`}
+          className="transition-all duration-700" />
+        {/* Value text */}
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize="14" fontWeight="bold" fill={color}>
+          {Math.round(pct)}
+        </text>
+      </svg>
+      <span className="text-xs font-medium text-gray-700 mt-1">{label}</span>
+      <span className="text-[10px] text-gray-400">{detail}</span>
+    </div>
+  );
+}
 
 /* ─── Circular Risk Gauge ─── */
 function RiskGauge({ pct, size = 80 }) {
@@ -181,6 +223,24 @@ function DepartmentDetail({ dept, employees, onBack }) {
   const totalCost = atRiskEmps.reduce((s, e) => s + (e.attrition_cost || 0), 0);
   const pct = Math.round((atRiskEmps.length / deptEmps.length) * 100);
 
+  // Team Health metrics
+  const healthMetrics = useMemo(() => {
+    const n = deptEmps.length;
+    if (n === 0) return { engagement: 0, overtime: 0, travel: 0, retention: 0 };
+
+    const engagement = deptEmps.reduce((s, e) => s + ((e.WorkLifeBalance || 0) / 4) * 100, 0) / n;
+    const overtime = (deptEmps.filter(e => e.OverTime === 'Yes').length / n) * 100;
+    const travel = (deptEmps.filter(e => e.BusinessTravel === 'Travel_Frequently').length / n) * 100;
+    const retention = 100 - (atRiskEmps.length / n) * 100;
+
+    return {
+      engagement: Math.round(engagement),
+      overtime: Math.round(overtime),
+      travel: Math.round(travel),
+      retention: Math.round(retention),
+    };
+  }, [deptEmps, atRiskEmps]);
+
   return (
     <div className="animate-fade-in">
       {/* Breadcrumbs */}
@@ -200,6 +260,35 @@ function DepartmentDetail({ dept, employees, onBack }) {
         <div>
           <h2 className="text-lg font-semibold text-gray-800">{dept}</h2>
           <p className="text-sm text-gray-500">{deptEmps.length} employees &middot; {atRiskEmps.length} at risk ({pct}%)</p>
+        </div>
+      </div>
+
+      {/* Team Health Score */}
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-blue-500" /> Team Health Score
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SemiGauge
+            value={healthMetrics.engagement}
+            label="Engagement"
+            detail={`Avg WLB: ${healthMetrics.engagement}%`}
+          />
+          <SemiGauge
+            value={100 - healthMetrics.overtime}
+            label="Overtime Burden"
+            detail={`${healthMetrics.overtime}% working OT`}
+          />
+          <SemiGauge
+            value={100 - healthMetrics.travel}
+            label="Travel Load"
+            detail={`${healthMetrics.travel}% travel freq.`}
+          />
+          <SemiGauge
+            value={healthMetrics.retention}
+            label="Retention Confidence"
+            detail={`${healthMetrics.retention}% safe`}
+          />
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   UserCheck, GitBranch, PieChart, FlaskConical,
   ChevronLeft, ChevronRight, Menu, Search, Bell, X, DollarSign,
-  AlertTriangle, ShieldAlert,
+  AlertTriangle, ShieldAlert, LayoutDashboard, Activity, Calculator,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { useModal } from '../hooks/useModal';
@@ -13,17 +13,25 @@ import ComparePanel from './ComparePanel';
 
 const NAV_SECTIONS = [
   {
+    label: 'OVERVIEW',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Executive Summary' },
+      { to: '/employees', icon: UserCheck, label: 'Employee Risk' },
+    ],
+  },
+  {
     label: 'ANALYSIS',
     items: [
-      { to: '/', icon: UserCheck, label: 'Employee Risk' },
       { to: '/departments', icon: GitBranch, label: 'Department Explorer' },
+      { to: '/insights', icon: PieChart, label: 'Insights' },
+      { to: '/timeline', icon: Activity, label: 'Timeline' },
     ],
   },
   {
     label: 'TOOLS',
     items: [
-      { to: '/insights', icon: PieChart, label: 'Insights' },
       { to: '/what-if', icon: FlaskConical, label: 'What-if Analysis' },
+      { to: '/cost-calculator', icon: Calculator, label: 'Cost Calculator' },
     ],
   },
 ];
@@ -295,12 +303,12 @@ export default function Layout() {
                     {!collapsed && (
                       <span className="truncate flex-1">{label}</span>
                     )}
-                    {to === '/' && highRiskCount > 0 && !collapsed && (
+                    {to === '/employees' && highRiskCount > 0 && !collapsed && (
                       <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                         {highRiskCount > 99 ? '99' : highRiskCount}
                       </span>
                     )}
-                    {to === '/' && highRiskCount > 0 && collapsed && (
+                    {to === '/employees' && highRiskCount > 0 && collapsed && (
                       <span className="absolute left-9 top-1 w-2 h-2 bg-red-500 rounded-full" />
                     )}
                   </NavLink>
