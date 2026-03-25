@@ -3,7 +3,7 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Cell,
 } from 'recharts';
-import { Play, RotateCcw, TrendingUp, ChevronUp } from 'lucide-react';
+import { Play, RotateCcw, TrendingUp, ChevronUp, Lightbulb, X as XIcon } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { predictAttrition } from '../lib/predict';
 import { formatCurrency, formatCurrencyFull } from '../lib/costs';
@@ -17,6 +17,7 @@ export default function WhatIfAnalysis() {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [edits, setEdits] = useState({});
   const [predictions, setPredictions] = useState(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Overtime, WorkLife, Travel, Performance dropdowns
   const [overtime, setOvertime] = useState('Original');
@@ -131,6 +132,18 @@ export default function WhatIfAnalysis() {
 
       {tab === 'whatif' && (
         <div className="space-y-4">
+          {/* Onboarding Banner */}
+          {!bannerDismissed && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800 flex-1">
+                Select employees from the risk list, adjust intervention parameters below, then click Promote to see the projected impact on attrition.
+              </p>
+              <button onClick={() => setBannerDismissed(true)} className="text-blue-400 hover:text-blue-600 shrink-0">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           {/* Department filter + Summary */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">

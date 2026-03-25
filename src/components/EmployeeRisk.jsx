@@ -277,7 +277,7 @@ export default function EmployeeRisk() {
                         <BarChart data={featureData} layout="vertical" margin={{ left: 10, right: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                           <XAxis type="number" stroke="#9ca3af" fontSize={11} label={{ value: 'Weight', position: 'bottom', fill: '#6b7280', fontSize: 11 }} />
-                          <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} width={160} />
+                          <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={9} width={180} />
                           <ReferenceLine x={0} stroke="#374151" />
                           <Tooltip
                             contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 12 }}

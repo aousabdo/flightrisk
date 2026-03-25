@@ -45,18 +45,11 @@ function HBarChart({ data, title, dataKey = 'value', nameKey = 'name' }) {
   );
 }
 
-function TabButton({ active, label, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-        active ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
+const TAB_LIST = [
+  { key: 'current', label: 'Attrition at Company Current Status' },
+  { key: 'predicted', label: 'Predicted Attrition: Current Employees' },
+  { key: 'analysis', label: 'Predicted Employee Attrition Analysis' },
+];
 
 export default function Insights() {
   const { employees, loading } = useData();
@@ -222,10 +215,20 @@ export default function Insights() {
         <ExportButton data={employees} filename="insights-data" />
       </div>
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-gray-200 mb-6">
-        <TabButton active={tab === 'current'} label="Attrition at Company Current Status" onClick={() => setTab('current')} />
-        <TabButton active={tab === 'predicted'} label="Predicted Attrition: Current Employees" onClick={() => setTab('predicted')} />
-        <TabButton active={tab === 'analysis'} label="Predicted Employee Attrition Analysis" onClick={() => setTab('analysis')} />
+      <div className="bg-gray-100 rounded-lg p-1 inline-flex gap-1 mb-6">
+        {TAB_LIST.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              tab === t.key
+                ? 'bg-white shadow-sm font-medium text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === 'current' && (
@@ -239,9 +242,9 @@ export default function Insights() {
             <HBarChart data={roleBar} title="By Job Role" />
             <HBarChart data={incomeBar} title="By Monthly Income" />
           </div>
-          <div className="flex justify-end pt-2">
-            <button onClick={() => setTab('predicted')} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-500">
-              Predicted Attrition &rarr;
+          <div className="flex justify-end pt-4">
+            <button onClick={() => setTab('predicted')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              Next: Predicted Attrition &rarr;
             </button>
           </div>
         </div>
@@ -258,12 +261,12 @@ export default function Insights() {
             <HBarChart data={atRiskRoleBar} title="Employees At Risk By Job Role" />
             <HBarChart data={atRiskIncomeBar} title="Employees At Risk By Monthly Income" />
           </div>
-          <div className="flex justify-between pt-2">
-            <button onClick={() => setTab('current')} className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
-              &larr; Company Current Status
+          <div className="flex justify-between pt-4">
+            <button onClick={() => setTab('current')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              &larr; Previous: Company Current Status
             </button>
-            <button onClick={() => setTab('analysis')} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-500">
-              Attrition Analysis &rarr;
+            <button onClick={() => setTab('analysis')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              Next: Attrition Analysis &rarr;
             </button>
           </div>
         </div>
@@ -370,9 +373,9 @@ export default function Insights() {
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="flex justify-start pt-2">
-            <button onClick={() => setTab('predicted')} className="px-4 py-2 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
-              &larr; Predicted Attrition
+          <div className="flex justify-start pt-4">
+            <button onClick={() => setTab('predicted')} className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              &larr; Previous: Predicted Attrition
             </button>
           </div>
         </div>
