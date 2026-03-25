@@ -147,8 +147,32 @@ function DepartmentDetail({ dept, employees, onBack }) {
       .sort((a, b) => b.atRisk - a.atRisk);
   }, [deptEmps]);
 
+  const byFactor = useMemo(() => {
+    const factors = [
+      { key: 'OverTime', label: 'Overtime' },
+      { key: 'BusinessTravel', label: 'Travel' },
+      { key: 'WorkLifeBalance', label: 'Work-Life Bal.' },
+    ];
+    return factors.map(({ key, label }) => {
+      const groups = {};
+      deptEmps.forEach(e => {
+        let val = e[key];
+        if (key === 'WorkLifeBalance') val = ['', 'Low', 'Good', 'Better', 'Best'][val] || val;
+        if (!groups[val]) groups[val] = { total: 0, atRisk: 0 };
+        groups[val].total++;
+        if (e.label === 'Yes') groups[val].atRisk++;
+      });
+      return {
+        label,
+        data: Object.entries(groups)
+          .map(([name, d]) => ({ name, atRisk: d.atRisk, safe: d.total - d.atRisk, rate: d.total > 0 ? ((d.atRisk / d.total) * 100).toFixed(0) : 0 }))
+          .sort((a, b) => (b.atRisk + b.safe) - (a.atRisk + a.safe)),
+      };
+    });
+  }, [deptEmps]);
+
   const topRisk = useMemo(() =>
-    [...atRiskEmps].sort((a, b) => (b.prob_of_attrition || 0) - (a.prob_of_attrition || 0)).slice(0, 10),
+    [...atRiskEmps].sort((a, b) => (b.prob_of_attrition || 0) - (a.prob_of_attrition || 0)).slice(0, 15),
     [atRiskEmps]
   );
 
@@ -183,26 +207,48 @@ function DepartmentDetail({ dept, employees, onBack }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Role breakdown chart */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Risk by Role</h3>
-          <ResponsiveContainer width="100%" height={Math.max(200, byRole.length * 45)}>
-            <BarChart data={byRole} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" stroke="#9ca3af" fontSize={11} />
-              <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} width={120} />
-              <Tooltip contentStyle={{ fontSize: 12 }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
-              <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Left: Charts stacked */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Risk by Role */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Risk by Role</h3>
+            <ResponsiveContainer width="100%" height={byRole.length * 40 + 40}>
+              <BarChart data={byRole} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" stroke="#9ca3af" fontSize={11} />
+                <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} width={120} />
+                <Tooltip contentStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
+                <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Risk by Factor - 2-col grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {byFactor.slice(0, 2).map(({ label, data }) => (
+              <div key={label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Risk by {label}</h3>
+                <ResponsiveContainer width="100%" height={data.length * 36 + 30}>
+                  <BarChart data={data} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" stroke="#9ca3af" fontSize={10} />
+                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} width={80} />
+                    <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v, name) => [v, name]} />
+                    <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
+                    <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Top risk employees */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Highest Risk Employees</h3>
-          <div className="space-y-2">
+        {/* Right: Scrollable top risk employees */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 flex flex-col" style={{ maxHeight: '600px' }}>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 shrink-0">Highest Risk Employees</h3>
+          <div className="space-y-2 overflow-y-auto flex-1 pr-1">
             {topRisk.map((emp, i) => {
               const risk = ((emp.prob_of_attrition || 0) * 100).toFixed(0);
               return (
