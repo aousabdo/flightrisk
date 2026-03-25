@@ -194,7 +194,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
               <Tooltip contentStyle={{ fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
-              <Bar dataKey="safe" name="Safe" stackId="a" fill="#e5e7eb" radius={[0, 3, 3, 0]} />
+              <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -314,7 +314,7 @@ export default function DepartmentView() {
             <Tooltip contentStyle={{ fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="atRisk" name="At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="safe" name="Safe" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="safe" name="Safe" fill="#60a5fa" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
