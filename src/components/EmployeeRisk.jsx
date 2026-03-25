@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X, ChevronDown, UserX } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { useModal } from '../hooks/useModal';
 import { formatCurrencyFull } from '../lib/costs';
@@ -186,6 +186,24 @@ export default function EmployeeRisk() {
   }, [employee, explanations]);
 
   if (loading) return <EmployeeRiskSkeleton />;
+
+  if (filteredEmployees.length === 0) {
+    return (
+      <div className="animate-fade-in flex flex-col items-center justify-center py-24 px-6 text-center">
+        <UserX className="w-16 h-16 text-gray-300 mb-4" />
+        <h2 className="text-lg font-semibold text-gray-700 mb-2">No employees match your filters</h2>
+        <p className="text-sm text-gray-400 mb-6 max-w-md">
+          Try adjusting the risk threshold or removing department/role filters
+        </p>
+        <button
+          onClick={() => { setDeptFilter([]); setRoleFilter([]); setRiskThreshold(0); }}
+          className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-500 transition-colors"
+        >
+          Reset Filters
+        </button>
+      </div>
+    );
+  }
 
   const risk = employee ? (employee.prob_of_attrition || 0) * 100 : 0;
   const prediction = employee?.label === 'Yes' ? 'Leave' : 'Stay';

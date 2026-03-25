@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   ChevronRight, ChevronDown, Building2, Briefcase, User, Layers,
-  AlertTriangle, Users, DollarSign, ArrowLeft, TrendingUp, Shield,
+  AlertTriangle, Users, DollarSign, TrendingUp, Shield,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
@@ -183,11 +183,14 @@ function DepartmentDetail({ dept, employees, onBack }) {
 
   return (
     <div className="animate-fade-in">
-      {/* Back + Header */}
-      <button onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 mb-4 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Overview
-      </button>
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-1.5 text-sm mb-4">
+        <button onClick={onBack} className="text-gray-500 hover:text-blue-600 transition-colors">
+          Department Explorer
+        </button>
+        <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+        <span className="text-gray-800 font-medium">{dept}</span>
+      </nav>
 
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center"
