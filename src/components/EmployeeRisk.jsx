@@ -1,13 +1,150 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, CartesianGrid, ReferenceLine,
 } from 'recharts';
-import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Search, Download, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { useModal } from '../hooks/useModal';
 import { formatCurrencyFull } from '../lib/costs';
 import ExportButton from './ExportButton';
+
+/* ── Virtualized Employee Search Combobox ── */
+function EmployeeCombobox({ employees, selectedId, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return employees.slice(0, 50);
+    const q = query.toLowerCase();
+    return employees.filter(e =>
+      e.Name.toLowerCase().includes(q) ||
+      e.Department.toLowerCase().includes(q) ||
+      e.JobRole.toLowerCase().includes(q)
+    ).slice(0, 50);
+  }, [employees, query]);
+
+  const selected = useMemo(() =>
+    employees.find(e => e.EmployeeNumber === selectedId),
+    [employees, selectedId]
+  );
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Scroll highlighted into view
+  useEffect(() => {
+    if (open && listRef.current) {
+      const el = listRef.current.children[highlightIdx];
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIdx, open]);
+
+  const handleKey = useCallback((e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter' && filtered[highlightIdx]) { onSelect(filtered[highlightIdx].EmployeeNumber); setOpen(false); setQuery(''); }
+    else if (e.key === 'Escape') { setOpen(false); setQuery(''); }
+  }, [filtered, highlightIdx, onSelect]);
+
+  const displayText = selected ? `${selected.Name}, ${((selected.prob_of_attrition || 0) * 100).toFixed(1)}%` : 'Select employee...';
+
+  return (
+    <div ref={containerRef} className="relative max-w-sm">
+      {/* Trigger */}
+      <button
+        onClick={() => { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded bg-white text-gray-800 text-sm hover:bg-gray-50 transition-colors text-left"
+      >
+        <Search className="w-4 h-4 text-gray-400 shrink-0" />
+        <span className="flex-1 truncate">{displayText}</span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded">
+              <Search className="w-3.5 h-3.5 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={e => { setQuery(e.target.value); setHighlightIdx(0); }}
+                onKeyDown={handleKey}
+                placeholder="Search by name, department, or role..."
+                className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+              />
+              {query && (
+                <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Results - virtualized (only renders 50 max) */}
+          <div ref={listRef} className="max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-400">No employees found</p>
+            ) : (
+              filtered.map((emp, i) => {
+                const risk = ((emp.prob_of_attrition || 0) * 100);
+                const isSelected = emp.EmployeeNumber === selectedId;
+                const isHighlighted = i === highlightIdx;
+                return (
+                  <button
+                    key={emp.EmployeeNumber}
+                    onClick={() => { onSelect(emp.EmployeeNumber); setOpen(false); setQuery(''); }}
+                    onMouseEnter={() => setHighlightIdx(i)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                      isHighlighted ? 'bg-blue-50' : isSelected ? 'bg-gray-50' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <img
+                      src={`https://i.pravatar.cc/32?u=${encodeURIComponent(emp.Name)}`}
+                      alt="" className="w-7 h-7 rounded-full object-cover shrink-0"
+                      loading="lazy"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{emp.Name}</p>
+                      <p className="text-[10px] text-gray-400">{emp.JobRole} · {emp.Department}</p>
+                    </div>
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                      risk >= 50 ? 'bg-red-100 text-red-600' : risk >= 20 ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                    }`}>
+                      {risk.toFixed(1)}%
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+            <p className="text-[10px] text-gray-400">
+              {filtered.length === 50 ? '50+ results' : `${filtered.length} results`}
+              {query ? ` for "${query}"` : ' · type to search'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EmployeeRisk() {
   const { employees, explanations, departments, jobRoles, loading } = useData();
@@ -72,18 +209,12 @@ export default function EmployeeRisk() {
           </div>
 
           {/* Employee Selector */}
-          <div className="mt-4 max-w-xs">
-            <select
-              value={employee?.EmployeeNumber || ''}
-              onChange={e => setSelectedId(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded bg-white text-gray-800 text-sm border-0 focus:ring-2 focus:ring-blue-400"
-            >
-              {filteredEmployees.map(emp => (
-                <option key={emp.EmployeeNumber} value={emp.EmployeeNumber}>
-                  {emp.Name}, {((emp.prob_of_attrition || 0) * 100).toFixed(1)}%
-                </option>
-              ))}
-            </select>
+          <div className="mt-4">
+            <EmployeeCombobox
+              employees={filteredEmployees}
+              selectedId={employee?.EmployeeNumber}
+              onSelect={setSelectedId}
+            />
           </div>
 
           {/* Risk & Prediction Cards */}
