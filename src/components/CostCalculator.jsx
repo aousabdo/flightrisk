@@ -157,11 +157,12 @@ export default function CostCalculator() {
     const directCost = separationCost + vacancyCost + acquisitionCost + placementCost;
 
     // 2. Lost Productivity Cost for one Employee
-    const lostProductivity = (annualRevenue / workdaysPerYear) *
+    const safeWorkdays = workdaysPerYear || 1; // prevent division by zero
+    const lostProductivity = (annualRevenue / safeWorkdays) *
       (daysPositionOpen + (onboardingDays * (effectivenessPct / 100)));
 
     // 3. Savings of Salary + Benefits for one Employee
-    const savings = (salaryBenefits / workdaysPerYear) * daysPositionOpen;
+    const savings = (salaryBenefits / safeWorkdays) * daysPositionOpen;
 
     // 4. Total Estimated Turnover Cost Per Employee
     const costPerEmployee = directCost + lostProductivity - savings;
