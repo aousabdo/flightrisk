@@ -6,6 +6,7 @@ import {
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
 import ExportButton from './ExportButton';
+import { InsightsSkeleton } from './Skeletons';
 
 const COLORS = ['#2196F3', '#FF5722', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
 const DEPT_COLORS = { 'Research & Development': '#4CAF50', 'Sales': '#FF9800', 'Human Resources': '#2196F3' };
@@ -211,7 +212,7 @@ export default function Insights() {
     male: d.atRisk - Math.round(d.atRisk * 0.4),
   }));
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <InsightsSkeleton />;
 
   return (
     <div className="p-6 animate-fade-in">

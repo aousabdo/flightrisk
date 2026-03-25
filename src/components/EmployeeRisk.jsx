@@ -8,6 +8,7 @@ import { useData } from '../hooks/useEmployees';
 import { useModal } from '../hooks/useModal';
 import { formatCurrencyFull } from '../lib/costs';
 import ExportButton from './ExportButton';
+import { EmployeeRiskSkeleton } from './Skeletons';
 
 /* ── Virtualized Employee Search Combobox ── */
 function EmployeeCombobox({ employees, selectedId, onSelect }) {
@@ -184,9 +185,7 @@ export default function EmployeeRisk() {
       }));
   }, [employee, explanations]);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
-  }
+  if (loading) return <EmployeeRiskSkeleton />;
 
   const risk = employee ? (employee.prob_of_attrition || 0) * 100 : 0;
   const prediction = employee?.label === 'Yes' ? 'Leave' : 'Stay';

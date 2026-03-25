@@ -10,6 +10,7 @@ import {
 import { useData } from '../hooks/useEmployees';
 import { formatCurrency } from '../lib/costs';
 import ExportButton from './ExportButton';
+import { DepartmentSkeleton } from './Skeletons';
 
 const RISK_COLORS = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
 const DEPT_COLORS = { 'Sales': '#3b82f6', 'Research & Development': '#8b5cf6', 'Human Resources': '#06b6d4' };
@@ -221,7 +222,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
                 <Tooltip contentStyle={{ fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
-                <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="safe" name="Safe" stackId="a" fill="#93c5fd" radius={[0, 3, 3, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -238,7 +239,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
                     <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} width={80} />
                     <Tooltip contentStyle={{ fontSize: 11 }} formatter={(v, name) => [v, name]} />
                     <Bar dataKey="atRisk" name="At Risk" stackId="a" fill="#ef4444" />
-                    <Bar dataKey="safe" name="Safe" stackId="a" fill="#60a5fa" radius={[0, 3, 3, 0]} />
+                    <Bar dataKey="safe" name="Safe" stackId="a" fill="#93c5fd" radius={[0, 3, 3, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -307,7 +308,7 @@ export default function DepartmentView() {
     [deptData]
   );
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <DepartmentSkeleton />;
 
   if (selectedDept) {
     return (
@@ -364,7 +365,7 @@ export default function DepartmentView() {
             <Tooltip contentStyle={{ fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="atRisk" name="At Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="safe" name="Safe" fill="#60a5fa" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="safe" name="Safe" fill="#93c5fd" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

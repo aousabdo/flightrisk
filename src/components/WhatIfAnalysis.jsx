@@ -8,6 +8,7 @@ import { useData } from '../hooks/useEmployees';
 import { predictAttrition } from '../lib/predict';
 import { formatCurrency, formatCurrencyFull } from '../lib/costs';
 import ExportButton from './ExportButton';
+import { WhatIfSkeleton } from './Skeletons';
 
 export default function WhatIfAnalysis() {
   const { employees, departments, modelReady, loading } = useData();
@@ -107,7 +108,7 @@ export default function WhatIfAnalysis() {
     setTab('updated');
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <WhatIfSkeleton />;
 
   return (
     <div className="p-6 animate-fade-in">
