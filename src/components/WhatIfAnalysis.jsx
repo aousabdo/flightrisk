@@ -125,33 +125,33 @@ export default function WhatIfAnalysis() {
       {tab === 'whatif' && (
         <div className="space-y-4">
           {/* Department filter + Summary */}
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <label className="text-sm text-gray-600">Select Department</label>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 whitespace-nowrap">Select Department</label>
               <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-                className="ml-2 px-3 py-1.5 border border-gray-300 rounded text-sm">
+                className="px-3 py-1.5 border border-gray-300 rounded text-sm">
                 <option value="">All</option>
                 {departments.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
-            <div className="flex gap-4 ml-auto">
-              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
-                <p className="text-xs text-gray-500">At-Risk Employees</p>
-                <p className="text-lg font-bold text-red-600">{atRisk.length}</p>
+            <div className="flex gap-3">
+              <div className="text-center px-3 py-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-[10px] text-gray-500">At-Risk Employees</p>
+                <p className="text-base font-bold text-red-600">{atRisk.length}</p>
               </div>
-              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
-                <p className="text-xs text-gray-500">Avg Risk</p>
-                <p className="text-lg font-bold text-amber-600">
+              <div className="text-center px-3 py-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-[10px] text-gray-500">Avg Risk</p>
+                <p className="text-base font-bold text-amber-600">
                   {atRisk.length > 0 ? ((atRisk.reduce((s, e) => s + (e.prob_of_attrition || 0), 0) / atRisk.length) * 100).toFixed(0) : 0}%
                 </p>
               </div>
-              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
-                <p className="text-xs text-gray-500">Total Cost Exposure</p>
-                <p className="text-lg font-bold text-purple-600">{formatCurrency(atRisk.reduce((s, e) => s + (e.attrition_cost || 0), 0))}</p>
+              <div className="text-center px-3 py-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-[10px] text-gray-500">Total Cost Exposure</p>
+                <p className="text-base font-bold text-purple-600">{formatCurrency(atRisk.reduce((s, e) => s + (e.attrition_cost || 0), 0))}</p>
               </div>
-              <div className="text-center px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
-                <p className="text-xs text-gray-500">Selected</p>
-                <p className="text-lg font-bold text-blue-600">{selectedRows.size}</p>
+              <div className="text-center px-3 py-1.5 bg-white rounded-lg shadow-sm border border-gray-200">
+                <p className="text-[10px] text-gray-500">Selected</p>
+                <p className="text-base font-bold text-blue-600">{selectedRows.size}</p>
               </div>
             </div>
           </div>
