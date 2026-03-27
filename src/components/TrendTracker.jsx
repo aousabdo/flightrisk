@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   TrendingUp, TrendingDown, Camera, Trash2, GitCompare, ArrowUpRight, ArrowDownRight,
   Minus, Calendar, AlertTriangle,
@@ -150,6 +150,8 @@ export default function TrendTracker() {
   const { employees, stats } = useData();
   const [snapshots, setSnapshots] = useState(loadSnapshots);
   const [compareIds, setCompareIds] = useState([]);
+  const [snapshotFeedback, setSnapshotFeedback] = useState(null); // 'success' | 'error' | null
+  const snapshotRef = useRef(null);
 
   const history = useMemo(() => generateHistory(employees, stats), [employees, stats]);
   const forecast = useMemo(() => generateForecast(history), [history]);
@@ -180,20 +182,35 @@ export default function TrendTracker() {
   }, [stats]);
 
   const takeSnapshot = useCallback(() => {
-    if (!stats) return;
-    const snap = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      total: stats.total,
-      atRiskCount: stats.atRiskCount,
-      attritionRate: parseFloat(((stats.atRiskCount / stats.total) * 100).toFixed(1)),
-      costExposure: stats.totalCost,
-      avgRisk: parseFloat((stats.avgProb * 100).toFixed(1)),
-      topRiskDept,
-    };
-    const updated = [snap, ...snapshots];
-    setSnapshots(updated);
-    saveSnapshots(updated);
+    if (!stats) {
+      setSnapshotFeedback('error');
+      setTimeout(() => setSnapshotFeedback(null), 2000);
+      return;
+    }
+    try {
+      const snap = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        total: stats.total ?? 0,
+        atRiskCount: stats.atRiskCount ?? 0,
+        attritionRate: stats.total > 0
+          ? parseFloat(((stats.atRiskCount / stats.total) * 100).toFixed(1))
+          : 0,
+        costExposure: stats.totalCost ?? 0,
+        avgRisk: parseFloat(((stats.avgProb ?? 0) * 100).toFixed(1)),
+        topRiskDept,
+      };
+      const updated = [snap, ...snapshots];
+      saveSnapshots(updated);
+      setSnapshots(updated);
+      setSnapshotFeedback('success');
+      setTimeout(() => setSnapshotFeedback(null), 2500);
+      setTimeout(() => snapshotRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    } catch (err) {
+      console.error('Failed to take snapshot:', err);
+      setSnapshotFeedback('error');
+      setTimeout(() => setSnapshotFeedback(null), 2000);
+    }
   }, [stats, snapshots, topRiskDept]);
 
   const deleteSnapshot = useCallback((id) => {
@@ -250,13 +267,30 @@ export default function TrendTracker() {
             12-month trend analysis with 3-month forecast
           </p>
         </div>
-        <button
-          onClick={takeSnapshot}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Camera className="w-4 h-4" />
-          Take Snapshot
-        </button>
+        <div className="flex items-center gap-3">
+          {snapshotFeedback === 'success' && (
+            <span className="text-sm font-medium text-green-600 flex items-center gap-1 animate-pulse">
+              ✓ Snapshot saved!
+            </span>
+          )}
+          {snapshotFeedback === 'error' && (
+            <span className="text-sm font-medium text-red-600">
+              ✗ Failed — no data yet
+            </span>
+          )}
+          <button
+            onClick={takeSnapshot}
+            disabled={snapshotFeedback === 'success'}
+            className={`inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors shadow-sm ${
+              snapshotFeedback === 'success'
+                ? 'bg-green-600 cursor-default'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            <Camera className="w-4 h-4" />
+            {snapshotFeedback === 'success' ? 'Saved!' : 'Take Snapshot'}
+          </button>
+        </div>
       </div>
 
       {/* Forecast Banner */}
@@ -459,7 +493,7 @@ export default function TrendTracker() {
       </div>
 
       {/* Snapshot History */}
-      <div className="bg-white border border-gray-200 rounded-lg">
+      <div ref={snapshotRef} className="bg-white border border-gray-200 rounded-lg">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-gray-400" />
