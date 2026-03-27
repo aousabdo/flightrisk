@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users, AlertTriangle, DollarSign, TrendingUp,
   Briefcase, Clock, MapPin, Award, ArrowRight, Sparkles, Printer,
+  Database, Upload as UploadIcon,
 } from 'lucide-react';
 import AnimatedCounter from './AnimatedCounter';
 import {
@@ -169,8 +171,19 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+function formatDateShort(isoString) {
+  if (!isoString) return 'Mar 27, 2026';
+  try {
+    return new Date(isoString).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+  } catch {
+    return 'Mar 27, 2026';
+  }
+}
+
 export default function ExecutiveSummary() {
-  const { employees, loading, stats } = useData();
+  const { employees, loading, stats, dataSource, uploadDate } = useData();
   const [showReport, setShowReport] = useState(false);
 
   const derived = useMemo(() => {
@@ -242,19 +255,43 @@ export default function ExecutiveSummary() {
   return (
     <div className="p-6 animate-fade-in space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Executive Summary</h1>
           <p className="text-sm text-gray-500 mt-1">Organization-wide flight risk overview and recommended actions</p>
         </div>
-        <button
-          onClick={() => setShowReport(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors print:hidden"
-        >
-          <Printer className="w-4 h-4" />
-          Generate Executive Report
-        </button>
+        <div className="flex items-center gap-3 print:hidden">
+          <span className="text-xs text-gray-400 flex items-center gap-1">
+            <Database className="w-3 h-3" />
+            Updated: {formatDateShort(dataSource === 'uploaded' ? uploadDate : null)}
+          </span>
+          <button
+            onClick={() => setShowReport(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Generate Executive Report
+          </button>
+        </div>
       </div>
+
+      {/* Sample data banner */}
+      {dataSource === 'default' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-blue-800">Using Sample Data</span>
+          </div>
+          <Link
+            to="/upload"
+            className="flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800"
+          >
+            <UploadIcon className="w-3.5 h-3.5" />
+            Upload your own data
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div data-tour="kpi-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

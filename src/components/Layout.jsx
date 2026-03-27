@@ -4,14 +4,17 @@ import {
   UserCheck, GitBranch, PieChart, FlaskConical,
   ChevronLeft, ChevronRight, Menu, Search, Bell, X, DollarSign,
   AlertTriangle, ShieldAlert, LayoutDashboard, Activity, Calculator,
-  HelpCircle, Settings,
+  HelpCircle, Settings, Upload, LogOut, RefreshCw, Database,
+  BarChart3, ClipboardList,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
+import { useAuth } from '../hooks/useAuth';
 import { useModal } from '../hooks/useModal';
 import { formatCurrency } from '../lib/costs';
 import EmployeeModal from './EmployeeModal';
 import ComparePanel from './ComparePanel';
 import OnboardingTour from './OnboardingTour';
+import AIChatPanel from './AIChatPanel';
 
 const NAV_SECTIONS = [
   {
@@ -27,6 +30,7 @@ const NAV_SECTIONS = [
       { to: '/departments', icon: GitBranch, label: 'Department Explorer' },
       { to: '/insights', icon: PieChart, label: 'Insights' },
       { to: '/timeline', icon: Activity, label: 'Timeline' },
+      { to: '/benchmarking', icon: BarChart3, label: 'Benchmarking' },
     ],
   },
   {
@@ -34,6 +38,13 @@ const NAV_SECTIONS = [
     items: [
       { to: '/what-if', icon: FlaskConical, label: 'What-if Analysis' },
       { to: '/cost-calculator', icon: Calculator, label: 'Cost Calculator' },
+      { to: '/actions', icon: ClipboardList, label: 'Action Tracker' },
+    ],
+  },
+  {
+    label: 'DATA',
+    items: [
+      { to: '/upload', icon: Upload, label: 'Upload Data' },
     ],
   },
 ];
@@ -245,17 +256,97 @@ function NotificationBell() {
   );
 }
 
+/* ─── User Menu Dropdown ─── */
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  if (!user) return null;
+
+  const roleBadgeColors = {
+    chro: 'bg-blue-100 text-blue-700',
+    vp: 'bg-emerald-100 text-emerald-700',
+    manager: 'bg-orange-100 text-orange-700',
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 hover:bg-gray-50 rounded-lg px-2 py-1 transition-colors"
+      >
+        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${user.color} flex items-center justify-center text-white text-xs font-bold`}>
+          {user.initials}
+        </div>
+        <div className="hidden sm:block text-left">
+          <p className="text-sm text-gray-700 leading-tight">{user.name}</p>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${roleBadgeColors[user.role] || 'bg-gray-100 text-gray-600'}`}>
+            {user.roleLabel}
+          </span>
+        </div>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+          <div className="px-3 py-2 border-b border-gray-100">
+            <p className="text-sm font-medium text-gray-800">{user.name}</p>
+            <p className="text-[11px] text-gray-500">{user.email}</p>
+          </div>
+          <button
+            onClick={() => { setOpen(false); logout(); navigate('/login'); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Format date helper ─── */
+function formatDate(isoString) {
+  if (!isoString) return 'N/A';
+  try {
+    return new Date(isoString).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showTour, setShowTour] = useState(() => !localStorage.getItem('flightrisk-tour-done'));
-  const { employees } = useData();
+  const { employees, dataSource, uploadDate, uploadCount, refreshPredictions } = useData();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const highRiskCount = useMemo(() =>
     employees.filter(e => (e.prob_of_attrition || 0) > 0.5).length,
     [employees]
   );
+
+  const dataLabel = dataSource === 'uploaded' ? 'Your Data' : 'Sample Data';
+  const dataBadgeColor = dataSource === 'uploaded' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
+  const dateDisplay = dataSource === 'uploaded' && uploadDate
+    ? formatDate(uploadDate)
+    : 'March 27, 2026';
+  const countDisplay = dataSource === 'uploaded'
+    ? `${(uploadCount || employees.length).toLocaleString()} employees`
+    : 'Sample Dataset';
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
@@ -307,6 +398,7 @@ export default function Layout() {
                     {!collapsed && (
                       <span className="truncate flex-1">{label}</span>
                     )}
+                    {/* High risk badge on Employee Risk */}
                     {to === '/employees' && highRiskCount > 0 && !collapsed && (
                       <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                         {highRiskCount > 99 ? '99' : highRiskCount}
@@ -314,6 +406,12 @@ export default function Layout() {
                     )}
                     {to === '/employees' && highRiskCount > 0 && collapsed && (
                       <span className="absolute left-9 top-1 w-2 h-2 bg-red-500 rounded-full" />
+                    )}
+                    {/* Data source badge on Upload Data */}
+                    {to === '/upload' && !collapsed && (
+                      <span className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${dataBadgeColor}`}>
+                        {dataSource === 'uploaded' ? 'Your Data' : 'Sample'}
+                      </span>
                     )}
                   </NavLink>
                 ))}
@@ -378,11 +476,8 @@ export default function Layout() {
             <Settings className="w-5 h-5" />
           </button>
 
-          {/* User */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">LS</div>
-            <span className="hidden sm:inline text-sm text-gray-600">Linda Smith</span>
-          </div>
+          {/* User Menu */}
+          <UserMenu />
         </header>
 
         {/* Page content */}
@@ -390,9 +485,22 @@ export default function Layout() {
           <Outlet />
         </div>
 
-        {/* Footer */}
-        <footer className="h-8 border-t border-gray-200 flex items-center px-4 bg-white print:hidden">
+        {/* Footer with data timestamp */}
+        <footer className="h-8 border-t border-gray-200 flex items-center justify-between px-4 bg-white print:hidden">
           <span className="text-[10px] text-gray-400">&copy; 2026 Analytica Data Science Solution</span>
+          <div className="flex items-center gap-2">
+            <Database className="w-3 h-3 text-gray-400" />
+            <span className="text-[10px] text-gray-400">
+              Data as of {dateDisplay} &middot; {countDisplay}
+            </span>
+            <button
+              onClick={refreshPredictions}
+              className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors"
+              title="Re-run predictions"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          </div>
         </footer>
       </main>
 
@@ -401,6 +509,9 @@ export default function Layout() {
 
       {/* Compare Panel (floating button + overlay) */}
       <ComparePanel />
+
+      {/* AI Chat Panel */}
+      <AIChatPanel />
 
       {/* Onboarding Tour */}
       {showTour && <OnboardingTour onComplete={() => setShowTour(false)} />}

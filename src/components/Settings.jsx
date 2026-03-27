@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import {
   Shield, DollarSign, Monitor, Bell, RotateCcw, Save, Check,
+  Sparkles, Eye, EyeOff, Loader2, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { useSettings } from '../hooks/useSettings';
 import { useData } from '../hooks/useEmployees';
+import { useGroq, MODELS } from '../hooks/useGroq';
 
 function SectionCard({ icon: Icon, title, children }) {
   return (
@@ -58,6 +60,109 @@ function ToggleField({ label, description, checked, onChange }) {
         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : ''}`} />
       </button>
     </div>
+  );
+}
+
+function AIConfigSection({ draft, updateDraft }) {
+  const { testConnection } = useGroq();
+  const [showKey, setShowKey] = useState(false);
+  const [testStatus, setTestStatus] = useState(null); // 'loading' | 'success' | 'error'
+  const [testMessage, setTestMessage] = useState('');
+
+  async function handleTestConnection() {
+    setTestStatus('loading');
+    setTestMessage('');
+    try {
+      // Temporarily save the key so testConnection can read it
+      const currentSettings = JSON.parse(localStorage.getItem('flightrisk-settings') || '{}');
+      localStorage.setItem('flightrisk-settings', JSON.stringify({
+        ...currentSettings,
+        groqApiKey: draft.groqApiKey,
+        groqModel: draft.groqModel,
+      }));
+
+      const result = await testConnection();
+      setTestStatus('success');
+      setTestMessage(result);
+    } catch (err) {
+      setTestStatus('error');
+      setTestMessage(err.message);
+    }
+  }
+
+  return (
+    <SectionCard icon={Sparkles} title="AI Configuration">
+      <div className="space-y-4">
+        {/* API Key */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Groq API Key</label>
+          <div className="relative">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={draft.groqApiKey || ''}
+              onChange={e => updateDraft({ groqApiKey: e.target.value })}
+              className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              placeholder="gsk_..."
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Get your free API key at{' '}
+            <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              console.groq.com
+            </a>
+          </p>
+        </div>
+
+        {/* Model Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+          <select
+            value={draft.groqModel || 'llama-3.3-70b-versatile'}
+            onChange={e => updateDraft({ groqModel: e.target.value })}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white"
+          >
+            {Object.entries(MODELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Test Connection */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTestConnection}
+            disabled={!draft.groqApiKey || testStatus === 'loading'}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {testStatus === 'loading' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Test Connection
+          </button>
+          {testStatus === 'success' && (
+            <span className="flex items-center gap-1 text-sm text-green-600">
+              <CheckCircle2 className="w-4 h-4" />
+              Connected
+            </span>
+          )}
+          {testStatus === 'error' && (
+            <span className="flex items-center gap-1 text-sm text-red-600 max-w-[250px] truncate" title={testMessage}>
+              <XCircle className="w-4 h-4 shrink-0" />
+              {testMessage}
+            </span>
+          )}
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -259,6 +364,9 @@ export default function Settings() {
           </select>
         </div>
       </SectionCard>
+
+      {/* AI Configuration */}
+      <AIConfigSection draft={draft} updateDraft={updateDraft} />
 
       {/* Notification Rules */}
       <SectionCard icon={Bell} title="Notification Rules">
