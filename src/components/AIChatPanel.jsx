@@ -110,7 +110,7 @@ export default function AIChatPanel() {
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[500px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden print:hidden animate-fade-in">
+        <div className="fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-50 w-full sm:w-96 h-[100dvh] sm:h-[500px] bg-white sm:rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden print:hidden animate-fade-in">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white shrink-0">
             <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export default function AIChatPanel() {
             )}
 
             {loading && (
-              <div className="flex justify-start">
+              <div className="flex justify-start" role="status">
                 <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2 text-sm text-gray-500">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Thinking...

@@ -269,7 +269,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <Activity className="w-4 h-4 text-blue-500" /> Team Health Score
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <SemiGauge
             value={healthMetrics.engagement}
             label="Engagement"
@@ -294,7 +294,7 @@ function DepartmentDetail({ dept, employees, onBack }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={Users} label="Headcount" value={<AnimatedCounter value={deptEmps.length} />} color="blue" />
         <StatCard icon={AlertTriangle} label="At Risk" value={<><AnimatedCounter value={atRiskEmps.length} /> ({pct}%)</>} color="red" />
         <StatCard icon={Briefcase} label="Roles" value={<AnimatedCounter value={byRole.length} />} color="green" />
@@ -424,7 +424,7 @@ export default function DepartmentView() {
       <p className="text-sm text-gray-500 mb-5">Click a department card to explore roles, risk, and employees</p>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={Users} label="Total Workforce" value={<AnimatedCounter value={employees.length} />} color="blue" />
         <StatCard icon={AlertTriangle} label="At Risk" value={<><AnimatedCounter value={totalAtRisk} /> ({orgPct}%)</>} color="red" />
         <StatCard icon={Building2} label="Departments" value={<AnimatedCounter value={Object.keys(deptData).length} />} color="green" />

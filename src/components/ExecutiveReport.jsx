@@ -134,7 +134,7 @@ export default function ExecutiveReport({ onClose }) {
   if (!report) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50 flex items-start justify-center overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-black/50 flex items-start justify-center overflow-y-auto" role="dialog" aria-modal="true" aria-label="Executive report">
       <style>{`
         @media print {
           body * { visibility: hidden !important; }
@@ -202,6 +202,7 @@ export default function ExecutiveReport({ onClose }) {
           {/* Department Breakdown */}
           <section className="mb-10 print-break">
             <h2 className="text-xl font-bold text-gray-800 mb-4" style={{ fontSize: 20 }}>Department Breakdown</h2>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-300">
@@ -224,11 +225,13 @@ export default function ExecutiveReport({ onClose }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
 
           {/* Top 10 Highest Risk */}
           <section className="mb-10">
             <h2 className="text-xl font-bold text-gray-800 mb-4" style={{ fontSize: 20 }}>Top 10 Highest Risk Employees</h2>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-300">
@@ -251,6 +254,7 @@ export default function ExecutiveReport({ onClose }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
 
           {/* Key Findings */}

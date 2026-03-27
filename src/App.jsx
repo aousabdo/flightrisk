@@ -16,6 +16,7 @@ import Settings from './components/Settings';
 import DataUpload from './components/DataUpload';
 import Benchmarking from './components/Benchmarking';
 import ActionTracker from './components/ActionTracker';
+import TrendTracker from './components/TrendTracker';
 
 function RequireAuth({ children }) {
   const { isAuthenticated } = useAuth();
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="/timeline" element={<Timeline />} />
         <Route path="/benchmarking" element={<Benchmarking />} />
         <Route path="/actions" element={<ActionTracker />} />
+        <Route path="/trends" element={<TrendTracker />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/upload" element={<DataUpload />} />
       </Route>

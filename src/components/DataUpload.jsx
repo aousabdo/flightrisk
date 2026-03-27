@@ -440,6 +440,10 @@ export default function DataUpload() {
             onDragOver={handleDragOver}
             onClick={() => fileInputRef.current?.click()}
             className="bg-white rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer p-12 text-center"
+            role="button"
+            tabIndex={0}
+            aria-label="Drag and drop CSV file here or click to browse"
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
           >
             <Upload className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-700">Drag and drop your CSV file here</p>
@@ -454,7 +458,7 @@ export default function DataUpload() {
           </div>
 
           {parseError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-3">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-3" role="alert">
               <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{parseError}</p>
             </div>

@@ -48,7 +48,7 @@ function KPICard({ icon: Icon, label, value, subtitle, accent, iconBg }) {
       <div className="min-w-0">
         <p className="text-sm text-gray-500">{label}</p>
         <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
       </div>
     </div>
   );
@@ -294,7 +294,7 @@ export default function ExecutiveSummary() {
       )}
 
       {/* KPI Cards */}
-      <div data-tour="kpi-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="kpi-cards" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={Users}
           label="Total Workforce"
@@ -347,7 +347,7 @@ export default function ExecutiveSummary() {
       {/* Middle section: Risk Distribution + Top Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Risk Distribution */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5" role="img" aria-label="Risk distribution chart showing employee counts by risk level: critical, high, medium, and low">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Risk Distribution</h2>
           <div className="space-y-3">
             {buckets.map(b => {
@@ -416,7 +416,7 @@ export default function ExecutiveSummary() {
       {/* Bottom section: Dept Risk, Top 10, Cost Donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Department Risk Overview */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5" role="img" aria-label="Department risk overview bar chart showing at-risk vs total employees by department">
           <h2 className="text-lg font-semibold text-gray-800 mb-3">Department Risk Overview</h2>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={deptData} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
@@ -477,7 +477,7 @@ export default function ExecutiveSummary() {
         </div>
 
         {/* Cost by Department */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5" role="img" aria-label="Cost by department donut chart showing attrition cost distribution across departments">
           <h2 className="text-lg font-semibold text-gray-800 mb-3">Cost by Department</h2>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>

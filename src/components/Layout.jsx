@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   UserCheck, GitBranch, PieChart, FlaskConical,
   ChevronLeft, ChevronRight, Menu, Search, Bell, X, DollarSign,
   AlertTriangle, ShieldAlert, LayoutDashboard, Activity, Calculator,
   HelpCircle, Settings, Upload, LogOut, RefreshCw, Database,
-  BarChart3, ClipboardList,
+  BarChart3, ClipboardList, TrendingUp,
 } from 'lucide-react';
 import { useData } from '../hooks/useEmployees';
 import { useAuth } from '../hooks/useAuth';
 import { useModal } from '../hooks/useModal';
 import { formatCurrency } from '../lib/costs';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
+import ShortcutsHelp from './ShortcutsHelp';
 import EmployeeModal from './EmployeeModal';
 import ComparePanel from './ComparePanel';
 import OnboardingTour from './OnboardingTour';
@@ -31,6 +33,7 @@ const NAV_SECTIONS = [
       { to: '/insights', icon: PieChart, label: 'Insights' },
       { to: '/timeline', icon: Activity, label: 'Timeline' },
       { to: '/benchmarking', icon: BarChart3, label: 'Benchmarking' },
+      { to: '/trends', icon: TrendingUp, label: 'Trends' },
     ],
   },
   {
@@ -50,7 +53,7 @@ const NAV_SECTIONS = [
 ];
 
 /* ─── Global Search ─── */
-function GlobalSearch() {
+function GlobalSearch({ onSearchRef }) {
   const { employees } = useData();
   const { openEmployee } = useModal();
   const [query, setQuery] = useState('');
@@ -95,6 +98,24 @@ function GlobalSearch() {
     };
   }, []);
 
+  // Expose a focus method to parent
+  useEffect(() => {
+    if (onSearchRef) {
+      onSearchRef({
+        focus: () => {
+          setExpanded(true);
+          setTimeout(() => inputRef.current?.focus(), 150);
+        },
+        close: () => {
+          setFocused(false);
+          setExpanded(false);
+          setQuery('');
+          inputRef.current?.blur();
+        },
+      });
+    }
+  }, [onSearchRef]);
+
   function selectEmployee(emp) {
     openEmployee(emp);
     setQuery('');
@@ -114,10 +135,13 @@ function GlobalSearch() {
       {!expanded ? (
         <button
           onClick={handleExpand}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-          title="Search employees"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+          title="Search employees (Ctrl+K)"
         >
           <Search className="w-5 h-5" />
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200 rounded">
+            <span className="text-[9px]">&#8984;</span>K
+          </kbd>
         </button>
       ) : (
         <div className="relative" style={{ width: 320 }}>
@@ -219,7 +243,7 @@ function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+        <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2" aria-live="polite">
           <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Alerts</p>
           {notifications.critical > 0 && (
             <div className="flex items-center gap-2.5 px-3 py-2 hover:bg-red-50">
@@ -330,9 +354,33 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showTour, setShowTour] = useState(() => !localStorage.getItem('flightrisk-tour-done'));
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const searchHandleRef = useRef(null);
   const { employees, dataSource, uploadDate, uploadCount, refreshPredictions } = useData();
   const { user } = useAuth();
+  const { closeEmployee } = useModal();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  const handleSearchRef = useCallback((handle) => {
+    searchHandleRef.current = handle;
+  }, []);
+
+  useKeyboardShortcuts({
+    onToggleShortcutsHelp: useCallback(() => setShowShortcuts(prev => !prev), []),
+    onFocusSearch: useCallback(() => searchHandleRef.current?.focus(), []),
+    onCloseAll: useCallback(() => {
+      searchHandleRef.current?.close();
+      closeEmployee();
+      setShowShortcuts(false);
+      setMobileOpen(false);
+    }, [closeEmployee]),
+  });
 
   const highRiskCount = useMemo(() =>
     employees.filter(e => (e.prob_of_attrition || 0) > 0.5).length,
@@ -350,32 +398,50 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
+      {/* Skip to main content link */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow-lg focus:text-blue-600">
+        Skip to main content
+      </a>
+
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        flex flex-col bg-[#1a237e] text-white
-        transition-all duration-300
-        ${collapsed ? 'w-14' : 'w-56'}
-        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-3 h-14 border-b border-white/10 shrink-0">
-          {!collapsed && (
+      <aside
+        role="navigation"
+        aria-label="Main navigation"
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50
+          flex flex-col bg-[#1a237e] text-white
+          transition-all duration-300
+          ${collapsed ? 'lg:w-14' : 'w-56'}
+          ${mobileOpen ? 'translate-x-0 w-56' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Mobile close button */}
+        <div className="flex items-center justify-between px-3 h-14 border-b border-white/10 shrink-0">
+          {(!collapsed || mobileOpen) && (
             <span className="text-xs font-semibold tracking-wide uppercase text-white/80">HR Analytics</span>
+          )}
+          {mobileOpen && (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="lg:hidden p-1 text-white/70 hover:text-white"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           )}
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-2 overflow-y-auto">
+        <nav className="flex-1 py-2 overflow-y-auto" aria-label="Main navigation">
           {NAV_SECTIONS.map((section, sIdx) => (
             <div key={section.label}>
               {sIdx > 0 && <div className="mx-3 my-1 border-t border-white/10" />}
-              {!collapsed && (
+              {(!collapsed || mobileOpen) && (
                 <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 mt-3 mb-1">{section.label}</p>
               )}
               <div className="space-y-0.5">
@@ -395,20 +461,20 @@ export default function Layout() {
                     `}
                   >
                     <Icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && (
+                    {(!collapsed || mobileOpen) && (
                       <span className="truncate flex-1">{label}</span>
                     )}
                     {/* High risk badge on Employee Risk */}
-                    {to === '/employees' && highRiskCount > 0 && !collapsed && (
+                    {to === '/employees' && highRiskCount > 0 && (!collapsed || mobileOpen) && (
                       <span className="ml-auto w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                         {highRiskCount > 99 ? '99' : highRiskCount}
                       </span>
                     )}
-                    {to === '/employees' && highRiskCount > 0 && collapsed && (
+                    {to === '/employees' && highRiskCount > 0 && collapsed && !mobileOpen && (
                       <span className="absolute left-9 top-1 w-2 h-2 bg-red-500 rounded-full" />
                     )}
                     {/* Data source badge on Upload Data */}
-                    {to === '/upload' && !collapsed && (
+                    {to === '/upload' && (!collapsed || mobileOpen) && (
                       <span className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${dataBadgeColor}`}>
                         {dataSource === 'uploaded' ? 'Your Data' : 'Sample'}
                       </span>
@@ -424,16 +490,21 @@ export default function Layout() {
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="hidden lg:flex items-center justify-center h-10 border-t border-white/10 text-white/50 hover:text-white"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden" role="main">
         {/* Top header bar */}
-        <header className="h-14 border-b border-gray-200 flex items-center px-4 lg:px-6 shrink-0 bg-white">
-          <button onClick={() => setMobileOpen(true)} className="lg:hidden p-1 mr-3 text-gray-500">
+        <header className="h-14 border-b border-gray-200 flex items-center px-4 lg:px-6 shrink-0 bg-white" aria-label="FlightRisk">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden p-1 mr-3 text-gray-500"
+            aria-label="Open navigation menu"
+          >
             <Menu className="w-5 h-5" />
           </button>
 
@@ -443,14 +514,14 @@ export default function Layout() {
               <span className="text-gray-800">FLIGHT </span>
               <span className="text-red-600">RISK</span>
             </span>
-            <span className="hidden sm:inline text-sm text-gray-500 ml-2">Predict and Prevent Employee Attrition</span>
+            <span className="hidden md:inline text-sm text-gray-500 ml-2">Predict and Prevent Employee Attrition</span>
           </div>
 
           <div className="flex-1" />
 
           {/* Search */}
           <div data-tour="search" className="hidden sm:block mr-3">
-            <GlobalSearch />
+            <GlobalSearch onSearchRef={handleSearchRef} />
           </div>
 
           {/* Notifications */}
@@ -458,20 +529,22 @@ export default function Layout() {
             <NotificationBell />
           </div>
 
-          {/* Help / Restart Tour */}
+          {/* Help / Restart Tour - hidden on mobile */}
           <button
             onClick={() => setShowTour(true)}
-            className="mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            className="hidden md:inline-flex mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
             title="Take a guided tour"
+            aria-label="Take a guided tour"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
 
-          {/* Settings */}
+          {/* Settings - hidden on mobile */}
           <button
             onClick={() => navigate('/settings')}
-            className="mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            className="hidden md:inline-flex mr-3 p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
             title="Settings"
+            aria-label="Settings"
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -481,22 +554,23 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 print:bg-white">
+        <div id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 print:bg-white">
           <Outlet />
         </div>
 
         {/* Footer with data timestamp */}
         <footer className="h-8 border-t border-gray-200 flex items-center justify-between px-4 bg-white print:hidden">
-          <span className="text-[10px] text-gray-400">&copy; 2026 Analytica Data Science Solution</span>
+          <span className="text-[10px] text-gray-500">&copy; 2026 Analytica Data Science Solution</span>
           <div className="flex items-center gap-2">
-            <Database className="w-3 h-3 text-gray-400" />
-            <span className="text-[10px] text-gray-400">
+            <Database className="w-3 h-3 text-gray-500" />
+            <span className="text-[10px] text-gray-500">
               Data as of {dateDisplay} &middot; {countDisplay}
             </span>
             <button
               onClick={refreshPredictions}
               className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors"
               title="Re-run predictions"
+              aria-label="Re-run predictions"
             >
               <RefreshCw className="w-3 h-3" />
             </button>
@@ -515,6 +589,9 @@ export default function Layout() {
 
       {/* Onboarding Tour */}
       {showTour && <OnboardingTour onComplete={() => setShowTour(false)} />}
+
+      {/* Keyboard Shortcuts Help */}
+      {showShortcuts && <ShortcutsHelp onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 }

@@ -87,6 +87,26 @@ export default function OnboardingTour({ onComplete }) {
   const [targetRect, setTargetRect] = useState(null);
   const [visible, setVisible] = useState(false);
   const tooltipRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  // Capture the element that had focus before the tour opened
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+    return () => {
+      // Return focus to trigger when tour closes
+      if (previousFocusRef.current && previousFocusRef.current.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, []);
+
+  // Focus the first button in the tooltip when it becomes visible
+  useEffect(() => {
+    if (visible && tooltipRef.current) {
+      const firstButton = tooltipRef.current.querySelector('button');
+      if (firstButton) firstButton.focus();
+    }
+  }, [visible, step]);
 
   const currentStep = TOUR_STEPS[step];
 
@@ -174,7 +194,7 @@ export default function OnboardingTour({ onComplete }) {
   const isLast = step === TOUR_STEPS.length - 1;
 
   return createPortal(
-    <div className="fixed inset-0" style={{ zIndex: 9999 }}>
+    <div className="fixed inset-0" style={{ zIndex: 9999 }} role="dialog" aria-modal="true" aria-label="Onboarding tour">
       {/* Semi-transparent backdrop with spotlight cutout */}
       <div
         className="absolute inset-0 bg-black/60 transition-all duration-300"

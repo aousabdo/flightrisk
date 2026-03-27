@@ -23,13 +23,15 @@ function SectionCard({ icon: Icon, title, children }) {
 
 function SliderField({ label, value, onChange, min, max, step = 1, suffix = '', format }) {
   const displayValue = format ? format(value) : `${value}${suffix}`;
+  const sliderId = `slider-${label.replace(/\s+/g, '-').toLowerCase()}`;
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label htmlFor={sliderId} className="text-sm font-medium text-gray-700">{label}</label>
         <span className="text-sm font-semibold text-gray-800">{displayValue}</span>
       </div>
       <input
+        id={sliderId}
         type="range"
         min={min}
         max={max}
@@ -37,6 +39,9 @@ function SliderField({ label, value, onChange, min, max, step = 1, suffix = '', 
         value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+        aria-valuenow={value}
+        aria-valuemin={min}
+        aria-valuemax={max}
       />
       <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
         <span>{format ? format(min) : `${min}${suffix}`}</span>
@@ -51,7 +56,7 @@ function ToggleField({ label, description, checked, onChange }) {
     <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
       <div>
         <p className="text-sm font-medium text-gray-700">{label}</p>
-        {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
       </div>
       <button
         onClick={() => onChange(!checked)}
@@ -95,24 +100,27 @@ function AIConfigSection({ draft, updateDraft }) {
       <div className="space-y-4">
         {/* API Key */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Groq API Key</label>
+          <label htmlFor="groq-api-key" className="block text-sm font-medium text-gray-700 mb-1">Groq API Key</label>
           <div className="relative">
             <input
+              id="groq-api-key"
               type={showKey ? 'text' : 'password'}
               value={draft.groqApiKey || ''}
               onChange={e => updateDraft({ groqApiKey: e.target.value })}
               className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent"
               placeholder="gsk_..."
+              aria-describedby="groq-api-key-help"
             />
             <button
               type="button"
               onClick={() => setShowKey(!showKey)}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label={showKey ? 'Hide API key' : 'Show API key'}
             >
               {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-1">
+          <p id="groq-api-key-help" className="text-xs text-gray-500 mt-1">
             Get your free API key at{' '}
             <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
               console.groq.com
@@ -122,8 +130,9 @@ function AIConfigSection({ draft, updateDraft }) {
 
         {/* Model Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+          <label htmlFor="groq-model" className="block text-sm font-medium text-gray-700 mb-1">Model</label>
           <select
+            id="groq-model"
             value={draft.groqModel || 'llama-3.3-70b-versatile'}
             onChange={e => updateDraft({ groqModel: e.target.value })}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white"
@@ -349,13 +358,15 @@ export default function Settings() {
         />
         <div className="flex items-center justify-between py-3">
           <div>
-            <p className="text-sm font-medium text-gray-700">Items Per Page</p>
-            <p className="text-xs text-gray-400 mt-0.5">Number of rows displayed in tables</p>
+            <label htmlFor="items-per-page" className="text-sm font-medium text-gray-700">Items Per Page</label>
+            <p id="items-per-page-help" className="text-xs text-gray-500 mt-0.5">Number of rows displayed in tables</p>
           </div>
           <select
+            id="items-per-page"
             value={draft.itemsPerPage}
             onChange={e => updateDraft({ itemsPerPage: parseInt(e.target.value) })}
             className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white"
+            aria-describedby="items-per-page-help"
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
